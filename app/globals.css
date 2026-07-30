@@ -1,26 +1,174 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* =============================================================================
+   ZERO STORE 디자인 토큰
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+   원칙 하나: 색을 화면에서 직접 고르지 않는다.
+   `bg-red-500` 대신 `bg-danger` 를 쓴다. 그래야 "재고 부족은 무슨 색이더라"를
+   매번 다시 정하지 않게 되고, 다크 모드가 공짜로 따라온다.
+
+   이 앱의 색은 장식이 아니라 상태다. 재고가 모자란지, 팔린 건지 들어온 건지,
+   마진이 남는지. 그래서 팔레트를 색 이름이 아니라 뜻으로 정의한다.
+   ========================================================================== */
+
+:root {
+  /* --- 표면 ------------------------------------------------------------- */
+  --surface: #ffffff;        /* 카드, 시트 */
+  --surface-sunken: #f4f4f5; /* 페이지 배경. 카드가 떠 보이게 한 단 낮춘다 */
+  --surface-raised: #ffffff;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+
+  /* --- 글자 ------------------------------------------------------------- */
+  --ink: #18181b;            /* 본문 */
+  --ink-muted: #71717a;      /* 보조 설명 */
+  --ink-subtle: #a1a1aa;     /* 비활성, 플레이스홀더 */
+  --ink-inverted: #ffffff;
+
+  /* --- 주 동작 ----------------------------------------------------------- */
+  /* 파랑을 쓴다. 이 앱에서 빨강·초록·주황은 전부 재고 상태에 예약되어 있어서
+     "저장" 같은 중립적 동작에 쓰면 뜻이 겹친다. */
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-ink: #ffffff;
+  --primary-soft: #eff6ff;
+
+  /* --- 재고 상태 --------------------------------------------------------- */
+  /* 색만으로 구분하지 않는다. 배지에는 항상 글자가 함께 들어간다.
+     한국 남성의 약 5%가 적록색약이고, 이 앱은 빨강/초록이 정반대 뜻이다. */
+  --in: #15803d;             /* 입고: 재고가 는다 */
+  --in-soft: #f0fdf4;
+  --out: #b45309;            /* 판매·출고: 재고가 준다 */
+  --out-soft: #fffbeb;
+  --low: #c2410c;            /* 재고 부족 */
+  --low-soft: #fff7ed;
+  --danger: #dc2626;         /* 음수 재고, 되돌릴 수 없는 동작 */
+  --danger-hover: #b91c1c;
+  --danger-soft: #fef2f2;
+  --danger-ink: #ffffff;
+
+  /* --- 금액 -------------------------------------------------------------- */
+  --profit: #15803d;         /* 마진 흑자 */
+  --loss: #dc2626;           /* 마진 적자 — 원가가 판매가보다 높은 경우 */
+
+  --focus: #2563eb;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --surface: #18181b;
+    --surface-sunken: #09090b;
+    --surface-raised: #27272a;
+    --border: #27272a;
+    --border-strong: #3f3f46;
+
+    --ink: #fafafa;
+    --ink-muted: #a1a1aa;
+    --ink-subtle: #71717a;
+    --ink-inverted: #18181b;
+
+    --primary: #3b82f6;
+    --primary-hover: #60a5fa;
+    --primary-ink: #0a0a0a;
+    --primary-soft: #172554;
+
+    /* 어두운 배경에서는 같은 색이 훨씬 탁해 보인다. 한 단계씩 밝힌다. */
+    --in: #4ade80;
+    --in-soft: #052e16;
+    --out: #fbbf24;
+    --out-soft: #292524;
+    --low: #fb923c;
+    --low-soft: #2c1810;
+    --danger: #f87171;
+    --danger-hover: #fca5a5;
+    --danger-soft: #2c1315;
+    --danger-ink: #0a0a0a;
+
+    --profit: #4ade80;
+    --loss: #f87171;
+
+    --focus: #60a5fa;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* `inline` 이어야 유틸리티가 var() 를 그대로 참조한다.
+   이게 없으면 빌드 시점 값이 복사되어 다크 모드 전환이 먹지 않는다. */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-raised: var(--surface-raised);
+  --color-border-base: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-ink-inverted: var(--ink-inverted);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-ink: var(--primary-ink);
+  --color-primary-soft: var(--primary-soft);
+
+  --color-in: var(--in);
+  --color-in-soft: var(--in-soft);
+  --color-out: var(--out);
+  --color-out-soft: var(--out-soft);
+  --color-low: var(--low);
+  --color-low-soft: var(--low-soft);
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-ink: var(--danger-ink);
+
+  --color-profit: var(--profit);
+  --color-loss: var(--loss);
+
+  /* 손가락 최소 크기. 계산대에서 한 손으로 쓰는 화면이라 넉넉하게 잡는다.
+     44px 는 접근성 가이드의 하한이고, 주요 동작은 56px 를 쓴다. */
+  --spacing-touch: 2.75rem;
+  --spacing-touch-lg: 3.5rem;
+
+  --radius-card: 0.875rem;
+
+  /* Geist 는 한글 글리프가 없다. 한글은 시스템 폰트로 떨어뜨린다.
+     한글 웹폰트는 서브셋을 해도 수백 KB라, 계산대에서 매번 받게 할 이유가 없다.
+     숫자와 영문만 Geist 가 그리고 한글은 기기 기본 글꼴이 그린다. */
+  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", "맑은 고딕",
+    system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    /* 아이폰에서 입력창을 누르면 화면이 확대되는 것을 막는다.
+       계산대에서 이게 일어나면 스캔 흐름이 끊긴다. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--surface-sunken);
+    color: var(--ink);
+  }
+
+  /* 수량과 금액은 자릿수가 흔들리면 표에서 읽기 어렵다.
+     tabular-nums 로 모든 숫자 폭을 고정한다. */
+  table,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* 마우스 클릭에는 링을 안 그리고 키보드 이동에만 그린다. */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* 모바일에서 길게 눌렀을 때 뜨는 파란 하이라이트 제거.
+     스캔·판매 버튼을 연타하는 화면이라 잔상이 거슬린다. */
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
 }
