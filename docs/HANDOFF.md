@@ -50,6 +50,38 @@ Next.js 16 (App Router, Turbopack) + Supabase. 모바일과 데스크톱이 반�
 5. **옵션 없는 상품도 변형 1개를 갖는다.** 재고 경로를 한 갈래로 유지하려는
    것이고, `create_product` 가 변형 0개를 거부하는 이유다.
 
+### 이번에 생긴 공용 조각
+
+화면을 새로 만들 때 다시 짜지 말고 이걸 써라.
+
+| 파일 | 쓰임 |
+|---|---|
+| `lib/search.ts` | 검색어 정제(`likePattern`)와 상품명·SKU·바코드 or() 조건 |
+| `lib/action-state.ts` | 서버 액션 결과 타입 + `ok()` / `fail()` |
+| `components/ui/action-form.tsx` | 서버 액션 하나를 감싸는 폼. 저장 중·오류·성공 문구를 한 곳에서 처리한다. 두 번 눌러야 실행되는 `confirmLabel` 도 여기 있다 |
+| `lib/constants.ts` | 한국어 라벨 매핑, `formatWon`/`formatQty`/`formatDateTime`, `todayInSeoul` |
+
+### 화면을 그릴 때의 규칙
+
+통계 화면을 만들며 정한 것들이다. **되돌리기 쉬운데 되돌리면 나빠지는** 것들이라
+적어둔다.
+
+- **한 계열이면 색은 하나다.** 막대 길이에 따라 색을 진하게 하지 마라. 길이가
+  이미 크기를 말하는데 색까지 같은 걸 말하면 남은 표현 수단을 낭비하는 것이고,
+  범주형 팔레트 검사도 통과하지 못한다.
+- **`data-numeric`(= `tabular-nums`)은 세로로 줄이 맞는 곳에만.** 표 안이나 축
+  눈금에는 맞고, `StatTile` 처럼 혼자 큰 숫자에는 안 맞는다 — 글자 사이가 벌어져
+  성기게 보인다. `components/ui/card.tsx` 의 `StatTile` 에서 일부러 뺐고 주석도
+  달아뒀다. 되돌리지 마라.
+- **막대마다 숫자를 붙이지 마라.** 최고점 하나만 글로 짚고, 나머지는 "숫자로
+  보기" 표로 읽게 한다. 마우스를 올려야만 알 수 있는 값이 있으면 안 된다.
+- **판매가 없던 날도 축에 자리를 잡는다.** 있는 날만 이으면 쉰 구간이 붙어서
+  추이가 거짓말을 한다 (`stats/period.ts` 의 `eachDay`).
+- **색은 뜻이다.** `bg-red-500` 이 아니라 `bg-danger`. 상태는 색만으로 말하지 않고
+  항상 글자나 아이콘이 함께 간다 (증감 화살표, 재고 배지).
+- **기간·필터는 화면 맨 위 한 줄.** 카드마다 제 기간을 갖게 하면 나란히 놓인 두
+  숫자가 서로 다른 기간이라 비교가 안 된다.
+
 ---
 
 ## 작업 중 찾아 고친 기존 버그 세 개
@@ -137,8 +169,34 @@ NULL 끼리 맞추려는 것). 그런데 PostgreSQL 은 FULL OUTER JOIN 을 merg
 - `v_stock_integrity` 0행
 
 지울 때 주의: 원장이 append-only 라 `stock_movements` 는 그냥 DELETE 가 안 된다.
-`trg_movements_append_only` 를 **한 트랜잭션 안에서** 껐다 지우고 다시 켜야 한다
-(Postgres 는 DDL 도 트랜잭션이라 중간에 실패해도 안전하다).
+`trg_movements_append_only` 를 **한 트랜잭션 안에서** 껐다 지우고 다시 켜야 한다.
+Postgres 는 DDL 도 트랜잭션이라 중간에 실패하면 트리거가 켜진 채로 롤백된다 —
+아래처럼 한 덩어리로 보내면 트리거가 꺼진 채 남는 일이 없다.
+
+```sql
+begin;
+  alter table public.stock_movements disable trigger trg_movements_append_only;
+
+  delete from public.stock_movements;
+  delete from public.sale_orders;
+  delete from public.barcodes;
+  delete from public.variants;
+  delete from public.products;
+  delete from public.suppliers;
+  -- 카테고리 4개와 app_settings 1행은 원래 시드다. 지우지 마라.
+
+  alter table public.stock_movements enable trigger trg_movements_append_only;
+commit;
+
+-- 확인: 아래가 전부 0 이어야 하고, 트리거는 다시 살아 있어야 한다
+select (select count(*) from public.stock_movements) movements,
+       (select count(*) from public.products) products,
+       (select tgenabled from pg_trigger
+         where tgname = 'trg_movements_append_only') as trigger_enabled; -- 'O' 여야 정상
+```
+
+계정까지 지우려면 `delete from auth.users where email='demo@example.com';`
+(`profiles` 는 cascade 로 같이 지워진다).
 
 ### 마이그레이션 버전 불일치 — 아직 안 고침
 
@@ -159,7 +217,17 @@ DB 내용은 정상이고 `pnpm dev` 로 쓰는 데는 문제가 없다. **다�
 1. **로그인 뒤 화면 실제 확인** — egress 허용 목록에 `*.supabase.co` 추가 필요.
 2. **마이그레이션 버전 정렬** — 위 참고. 사용자 확인 대기.
 3. **Vercel 배포** — 사용자 확인 대기.
-4. **데모 데이터 정리** — 사용자가 다 본 뒤에.
+4. **데모 데이터 정리** — 사용자가 다 본 뒤에. SQL 은 위에 적어뒀다.
+
+### 저장소 상태
+
+- 저장소 `hu28035036-ux/ZERO_STORE_YOUNGSIM`, 브랜치
+  `claude/inventory-management-planning-fk6i1t`. 기본 브랜치는 건드리지 않았다.
+- **PR 은 아직 만들지 않았다.** 사용자가 요청하지 않아서다. 만들 때는 저장소에
+  PR 템플릿이 있는지 먼저 확인할 것 (지금은 없다).
+- `.env.local` 은 gitignore 라 저장소에 없다. 새로 받으면 만들어야 하고, 없으면
+  빌드가 그 자리에서 실패한다 (`lib/supabase/env.ts`). 값은 `README.md` 에 표로
+  있다.
 
 ### 손대지 않은 것들 (의도적)
 
