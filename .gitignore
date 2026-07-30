@@ -49,3 +49,6 @@ next-env.d.ts
 
 # postinstall 로 복사되는 ZXing WASM 바이너리
 /public/wasm/
+
+# subagent-driven-development 작업 기록 (스크래치)
+.superpowers

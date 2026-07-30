@@ -22,7 +22,157 @@
 
 ---
 
-### Task 1: `update_product` RPC
+### Task 1: 공용 조각 추출
+
+수정 화면(Task 4)은 등록 화면과 같은 조각 셋을 쓴다. 그대로 복사하면 나중에 한쪽만
+고쳐서 두 화면이 어긋난다. 먼저 공용으로 빼고 등록 화면을 거기에 얹는다. 이 과제가
+끝나도 등록 화면의 동작은 하나도 달라지지 않아야 한다 — 순수한 자리 옮김이다.
+
+**Files:**
+- Create: `app/(app)/stock/categories.ts`
+- Create: `app/(app)/stock/variant-fields.tsx`
+- Modify: `app/(app)/stock/new/page.tsx:18-31` (평탄화 로직 → 공용 함수 호출)
+- Modify: `app/(app)/stock/new/product-form.tsx:13`, `:62-83` (`CategoryOption`·`toInt`·`Cell` 을 공용에서 가져오기)
+
+**Interfaces:**
+- Consumes: 없음
+- Produces:
+  - `categories.ts`: `export type CategoryOption = { id: string; label: string }`,
+    `export function toCategoryOptions(rows: CategoryRow[]): CategoryOption[]`
+    where `type CategoryRow = { id: string; name: string; parent_id: string | null }`
+  - `variant-fields.tsx`: `export function Cell({ label, children }: { label: string; children: React.ReactNode })`,
+    `export function toInt(value: string): number`
+
+- [ ] **Step 1: `categories.ts` 를 만든다**
+
+```ts
+export type CategoryOption = { id: string; label: string }
+
+type CategoryRow = { id: string; name: string; parent_id: string | null }
+
+/**
+ * 2단 계층을 "대분류 > 소분류" 한 줄로 편다.
+ *
+ * optgroup 을 쓰면 대분류 자체를 고를 수 없어서 소분류가 없는 카테고리가
+ * 선택지에서 사라진다. 상품 등록과 수정이 같은 목록을 봐야 하므로 여기 한 번만 둔다.
+ */
+export function toCategoryOptions(rows: CategoryRow[]): CategoryOption[] {
+  const nameById = new Map(rows.map((c) => [c.id, c.name]))
+
+  return rows
+    .map((c) => ({
+      id: c.id,
+      label: c.parent_id ? `${nameById.get(c.parent_id) ?? '?'} > ${c.name}` : c.name,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'ko'))
+}
+```
+
+- [ ] **Step 2: `variant-fields.tsx` 를 만든다**
+
+`'use client'` 를 붙이지 않는다. 둘 다 훅도 이벤트 핸들러도 없는 순수 조각이라
+클라이언트 컴포넌트가 가져다 쓰면 그쪽 경계를 따라간다.
+
+```tsx
+/**
+ * 좁은 화면에서만 보이는 필드 라벨.
+ *
+ * 넓은 화면에는 위에 머리글 줄이 한 번 있으므로 줄마다 라벨을 반복하면 표가
+ * 읽히지 않는다. 좁은 화면에는 머리글이 없으니 라벨이 있어야 한다.
+ * 어느 쪽이든 입력에는 aria-label 이 붙으므로 스크린리더는 항상 읽을 수 있다.
+ */
+export function Cell({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-ink-muted text-xs sm:hidden">{label}</span>
+      {children}
+    </div>
+  )
+}
+
+/** 사용자가 친 숫자에서 쉼표와 단위를 걷어낸다. 빈 칸은 0 이다. */
+export function toInt(value: string): number {
+  const n = Number(value.replace(/[^\d]/g, ''))
+  return Number.isFinite(n) ? n : 0
+}
+```
+
+- [ ] **Step 3: `new/page.tsx` 가 공용 함수를 쓰게 한다**
+
+18~31행의 `nameById` 선언부터 `.sort(...)` 까지를 지우고 한 줄로 바꾼다:
+
+```tsx
+  const options = toCategoryOptions(categories.data ?? [])
+```
+
+`rows` 변수도 그 블록에서만 쓰였으므로 함께 지운다. import 를 고친다:
+
+```tsx
+import { toCategoryOptions } from '../categories'
+import { ProductForm } from './product-form'
+```
+
+(`CategoryOption` 을 `product-form` 에서 가져오던 import 는 사라진다 — 이제 타입을
+직접 쓰지 않는다.)
+
+- [ ] **Step 4: `new/product-form.tsx` 가 공용 조각을 쓰게 한다**
+
+- 13행의 `export type CategoryOption = ...` 을 지운다
+- 62~65행의 `function toInt` 를 지운다
+- 74~83행의 `function Cell` 과 그 위 주석을 지운다
+- import 를 더한다:
+
+```tsx
+import { type CategoryOption } from '../categories'
+import { Cell, toInt } from '../variant-fields'
+```
+
+`CategoryOption` 은 이 파일의 props 타입에 계속 쓰이므로 가져와야 한다.
+
+- [ ] **Step 5: 타입체크·lint·빌드**
+
+```bash
+./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/eslint && ./node_modules/.bin/next build
+```
+
+기대: 셋 다 통과. `CategoryOption` 을 `product-form` 에서 가져오는 곳이 남아 있으면
+tsc 가 잡아준다.
+
+- [ ] **Step 6: 등록 화면이 그대로인지 브라우저로 확인한다**
+
+이 과제는 자리만 옮긴 것이라 화면이 달라지면 그 자체가 실패다.
+
+```bash
+./node_modules/.bin/next start --port 3100
+```
+
+`.claude/skills/run-app/SKILL.md` 의 Playwright 방식으로 `/stock/new` 를 데스크톱과
+390px 모바일 양쪽에서 연다. **IDE 브라우저 패널로 보지 마라** — 스킬의
+`requestAnimationFrame` 항목을 읽어라.
+
+확인할 것:
+- 카테고리 선택지가 "음료", "과자" 처럼 전과 같이 나오고 순서도 같다
+- 옵션을 하나 추가하면 변형 표가 뜨고, 좁은 화면에서 각 입력 위에 "판매가",
+  "원가" 같은 라벨이 보인다 (`Cell` 이 살아 있다는 뜻)
+- 콘솔 오류 0
+
+- [ ] **Step 7: 커밋**
+
+```bash
+git add "app/(app)/stock/categories.ts" "app/(app)/stock/variant-fields.tsx" \
+        "app/(app)/stock/new/page.tsx" "app/(app)/stock/new/product-form.tsx"
+git commit -m "상품 등록·수정이 함께 쓸 조각을 공용으로"
+```
+
+---
+
+### Task 2: `update_product` RPC
 
 **Files:**
 - Create: `supabase/migrations/20260731000001_update_product_rpc.sql`
@@ -317,13 +467,13 @@ git commit -m "상품 수정 RPC (update_product)"
 
 ---
 
-### Task 2: `updateProduct` 서버 액션
+### Task 3: `updateProduct` 서버 액션
 
 **Files:**
 - Modify: `app/(app)/stock/actions.ts` (파일 끝에 추가. `humanize()` 를 그대로 쓴다)
 
 **Interfaces:**
-- Consumes: Task 1 의 `public.update_product`, 기존 `humanize(error)`, `requireUser()`, `lib/action-state.ts` 의 `ok()`/`fail()`
+- Consumes: Task 2 의 `public.update_product`, 기존 `humanize(error)`, `requireUser()`, `lib/action-state.ts` 의 `ok()`/`fail()`
 - Produces: `updateProduct(prev: ActionState, formData: FormData): Promise<ActionState>` — 폼은 `payload` 라는 이름의 hidden 필드에 JSON 한 덩이를 싣는다
 
 - [ ] **Step 1: `actions.ts` 위쪽 import 에 `ActionState` 를 더한다**
@@ -444,14 +594,14 @@ git commit -m "상품 수정 서버 액션"
 
 ---
 
-### Task 3: 수정 화면
+### Task 4: 수정 화면
 
 **Files:**
 - Create: `app/(app)/stock/[productId]/edit/page.tsx`
 - Create: `app/(app)/stock/[productId]/edit/edit-form.tsx`
 
 **Interfaces:**
-- Consumes: Task 2 의 `updateProduct`, `v_variant_stock` 뷰(변형별 `variant_id`·`option_label`·`stock_qty`·`cost_price`·`sale_price`·`low_stock_threshold`·`barcode`), `components/ui/field.tsx` 의 `Input`/`NumberInput`/`Select`, `components/ui/card.tsx` 의 `Card`/`CardHeader`/`CardTitle`/`CardBody`
+- Consumes: Task 3 의 `updateProduct`, Task 1 의 `toCategoryOptions`/`CategoryOption`/`Cell`/`toInt`, `v_variant_stock` 뷰(변형별 `variant_id`·`option_label`·`stock_qty`·`cost_price`·`sale_price`·`low_stock_threshold`·`barcode`), `components/ui/field.tsx` 의 `Input`/`NumberInput`/`Select`, `components/ui/card.tsx` 의 `Card`/`CardHeader`/`CardTitle`/`CardBody`
 - Produces: `/stock/[productId]/edit` 경로. `EditProductForm` 은 이 화면 전용이라 밖에서 쓰지 않는다.
 
 - [ ] **Step 1: 서버 컴포넌트를 만든다**
@@ -465,8 +615,8 @@ import { ChevronLeft } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
 
+import { toCategoryOptions } from '../../categories'
 import { EditProductForm, type EditVariant } from './edit-form'
-import type { CategoryOption } from '../../new/product-form'
 
 export const metadata = { title: '상품 수정' }
 
@@ -497,17 +647,7 @@ export default async function EditProductPage({
 
   if (!product.data) notFound()
 
-  const catRows = categories.data ?? []
-  const nameById = new Map(catRows.map((c) => [c.id, c.name]))
-
-  // 2단 계층을 "대분류 > 소분류" 한 줄로 편다. optgroup 을 쓰면 대분류 자체를
-  // 고를 수 없어서 소분류가 없는 카테고리가 선택지에서 사라진다.
-  const options: CategoryOption[] = catRows
-    .map((c) => ({
-      id: c.id,
-      label: c.parent_id ? `${nameById.get(c.parent_id) ?? '?'} > ${c.name}` : c.name,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'ko'))
+  const options = toCategoryOptions(categories.data ?? [])
 
   const variants: EditVariant[] = (rows.data ?? []).map((v) => ({
     variantId: v.variant_id!,
@@ -562,7 +702,8 @@ import { formatQty, formatWon } from '@/lib/constants'
 import type { ActionState } from '@/lib/action-state'
 
 import { updateProduct } from '../../actions'
-import type { CategoryOption } from '../../new/product-form'
+import { type CategoryOption } from '../../categories'
+import { Cell, toInt } from '../../variant-fields'
 
 export type EditVariant = {
   variantId: string
@@ -572,27 +713,6 @@ export type EditVariant = {
   barcode: string
   stockQty: number
   costPrice: number
-}
-
-function toInt(value: string): number {
-  const n = Number(value.replace(/[^\d]/g, ''))
-  return Number.isFinite(n) ? n : 0
-}
-
-/**
- * 좁은 화면에서만 보이는 필드 라벨.
- *
- * 넓은 화면에는 머리글 줄이 한 번 있으므로 줄마다 라벨을 반복하면 표가 읽히지
- * 않는다. 좁은 화면에는 머리글이 없으니 라벨이 있어야 한다. 어느 쪽이든 입력에는
- * aria-label 이 붙으므로 스크린리더는 항상 읽을 수 있다.
- */
-function Cell({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-ink-muted text-xs sm:hidden">{label}</span>
-      {children}
-    </div>
-  )
 }
 
 const GRID = 'sm:grid-cols-[1.6fr_1fr_1fr_1.4fr]'
@@ -836,14 +956,14 @@ git commit -m "상품 수정 화면"
 
 ---
 
-### Task 4: 재고 목록에서 수정 화면으로
+### Task 5: 재고 목록에서 수정 화면으로
 
 **Files:**
 - Modify: `app/(app)/stock/stock-cards.tsx:17-19` (카드 전체를 링크로)
 - Modify: `app/(app)/stock/stock-table.tsx:85` (상품명 칸을 링크로)
 
 **Interfaces:**
-- Consumes: `StockRow` 의 `product_id`, Task 3 의 `/stock/[productId]/edit`
+- Consumes: `StockRow` 의 `product_id`, Task 4 의 `/stock/[productId]/edit`
 - Produces: 없음 (화면 변경만)
 
 - [ ] **Step 1: 모바일 카드를 링크로 감싼다**
@@ -909,14 +1029,14 @@ git commit -m "재고 목록에서 상품 수정 화면으로"
 
 ---
 
-### Task 5: 전체 검증과 문서
+### Task 6: 전체 검증과 문서
 
 **Files:**
 - Modify: `docs/HANDOFF.md`
 - Modify: `README.md` (데이터 모델 절에 `update_product` 한 줄)
 
 **Interfaces:**
-- Consumes: Task 1~4 전부
+- Consumes: Task 1~5 전부
 - Produces: 없음
 
 - [ ] **Step 1: 두 셸 전 화면을 다시 훑는다**
@@ -968,19 +1088,20 @@ https://zero-store-youngsim.vercel.app 를 갱신하려면 `vercel --prod` 를 �
 
 | 스펙 항목 | 어디서 |
 |---|---|
-| 상품명·카테고리·설명 수정 | Task 1 RPC, Task 3 폼 |
-| 변형 판매가·최소재고·바코드 수정 | Task 1 RPC, Task 3 폼 |
-| `stock_qty`·`cost_price` 읽기 전용 | Task 1(UPDATE 문에 없음), Task 3(회색 표시), Task 1 스모크 2번 |
-| 입출고로 가는 링크 | Task 3 Step 2 |
-| 상품 통째로 한 화면 | Task 3 |
-| 목록에서 진입 | Task 4 |
-| RPC 하나로 묶기 | Task 1 |
-| 변형 소속 검사 | Task 1(`and product_id =`), 스모크 6번 |
-| 대표 바코드만 교체 | Task 1, 스모크 4·4b·5번 |
-| 오류 문구 | Task 2(zod·중복), Task 1(P0001), 기존 `humanize`(23505) |
+| 상품명·카테고리·설명 수정 | Task 2 RPC, Task 4 폼 |
+| 변형 판매가·최소재고·바코드 수정 | Task 2 RPC, Task 4 폼 |
+| `stock_qty`·`cost_price` 읽기 전용 | Task 2(UPDATE 문에 없음), Task 4(회색 표시), Task 2 스모크 2번 |
+| 입출고로 가는 링크 | Task 4 Step 2 |
+| 상품 통째로 한 화면 | Task 4 |
+| 목록에서 진입 | Task 5 |
+| RPC 하나로 묶기 | Task 2 |
+| 변형 소속 검사 | Task 2(`and product_id =`), 스모크 6번 |
+| 대표 바코드만 교체 | Task 2, 스모크 4·4b·5번 |
+| 오류 문구 | Task 3(zod·중복), Task 2(P0001), 기존 `humanize`(23505) |
 | 빈 변형 배열 허용 | 스모크 8번 |
-| 마이그레이션 version 정렬 | Task 1 Step 4 |
-| 검증(SQL·빌드·브라우저) | Task 1 Step 5, Task 3 Step 3~5, Task 5 |
+| 마이그레이션 version 정렬 | Task 2 Step 4 |
+| 검증(SQL·빌드·브라우저) | Task 2 Step 5, Task 4 Step 3~5, Task 6 |
+| 중복 없이 조각 공유 | Task 1 |
 
 빠진 것 없음.
 
