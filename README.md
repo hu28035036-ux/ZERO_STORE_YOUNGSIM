@@ -20,6 +20,35 @@ pnpm dev
 secret 키는 이 앱에 두지 않는다. 모든 쓰기가 로그인 사용자 권한으로 RLS 를 통과해야
 `created_by` 감사 기록이 성립하기 때문이다.
 
+## 계정 만들기
+
+가입 화면은 없다. 같이 쓰는 사람만 들어오는 앱이라 계정은 Supabase 대시보드에서
+만든다. **Authentication > Users > Add user** 에서 이메일과 비밀번호를 넣고,
+"Auto Confirm User" 를 켠다 (메일 발송 설정을 안 했으면 확인 메일이 안 간다).
+
+사용자가 생기면 트리거가 `profiles` 행을 자동으로 만든다. 화면에 표시할 이름은
+User Metadata 에 `display_name` 으로 넣으면 그대로 쓰이고, 없으면 이메일의
+아이디 부분을 쓴다.
+
+## 배포 (Vercel)
+
+1. Vercel 에서 **Add New > Project > Import Git Repository** 로 이 저장소를 고른다.
+   프레임워크는 Next.js 로 자동 인식된다. 빌드 설정은 건드릴 것이 없다.
+2. **Environment Variables** 에 두 개를 넣는다. Production / Preview / Development
+   세 환경에 모두 넣어야 프리뷰 배포도 동작한다.
+
+   | 이름 | 값 |
+   | --- | --- |
+   | `NEXT_PUBLIC_SUPABASE_URL` | `https://jnacpoqvnajjjfwwotnw.supabase.co` |
+   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 프로젝트 설정 > API 의 publishable 키 |
+
+   둘 다 없으면 빌드가 그 자리에서 실패한다 (`lib/supabase/env.ts`). 런타임에
+   "Invalid API key" 같은 엉뚱한 메시지로 터지는 것보다 낫다고 보고 그렇게 두었다.
+3. 배포 후 Supabase 대시보드의 **Authentication > URL Configuration** 에서
+   Site URL 을 배포된 주소로 바꾼다. 비밀번호 재설정 메일의 링크가 이 값을 쓴다.
+
+이후로는 이 브랜치에 푸시할 때마다 자동 배포된다.
+
 ## 데이터 모델
 
 마이그레이션은 `supabase/migrations/` 에 번호순으로 있다.
