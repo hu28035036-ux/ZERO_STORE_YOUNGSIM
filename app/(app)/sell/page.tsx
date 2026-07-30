@@ -1,12 +1,41 @@
-import { NotBuiltYet } from '@/components/ui/not-built-yet'
+import { StatTile } from '@/components/ui/card'
+import { formatQty, formatWon, todayInSeoul } from '@/lib/constants'
+import { getDevice } from '@/lib/server-device'
+import { createClient } from '@/lib/supabase/server'
+
+import { SellTerminal } from './sell-terminal'
 
 export const metadata = { title: '판매' }
 
-export default function SellPage() {
+export default async function SellPage() {
+  const supabase = await createClient()
+  const today = todayInSeoul()
+
+  const [device, todaySales] = await Promise.all([
+    getDevice(),
+    // v_daily_sales 는 KST 로 날짜를 자른다. 여기서도 KST 오늘을 그대로 넘긴다.
+    supabase.from('v_daily_sales').select('*').eq('sale_date', today).maybeSingle(),
+  ])
+
+  const sales = todaySales.data
+
   return (
-    <NotBuiltYet
-      title="판매"
-      plan="바코드를 찍어 장바구니에 담고 한 번에 판매를 등록합니다. 저장은 record_sale() 하나로 끝나고, 영수증 단위로 묶여 객단가와 판매 건수가 통계에 잡힙니다."
-    />
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-3 gap-3">
+        <StatTile label="오늘 매출" value={formatWon(sales?.revenue)} />
+        <StatTile
+          label="판매 건수"
+          value={`${formatQty(sales?.order_count)}건`}
+          hint={`${formatQty(sales?.qty_sold)}점`}
+        />
+        <StatTile
+          label="오늘 마진"
+          value={formatWon(sales?.margin)}
+          tone={(sales?.margin ?? 0) < 0 ? 'loss' : 'profit'}
+        />
+      </div>
+
+      <SellTerminal device={device} />
+    </div>
   )
 }
