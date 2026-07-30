@@ -279,7 +279,7 @@ export function SellTerminal({ device }: { device: Device }) {
                     </Button>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-1">
                       <Button
                         variant="secondary"
@@ -314,7 +314,16 @@ export function SellTerminal({ device }: { device: Device }) {
                       </Button>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    {/*
+                      390px 화면에서는 수량 스테퍼(터치 크기라 못 줄인다)와 단가 칸과
+                      줄 합계가 한 줄에 물리적으로 안 들어간다. 억지로 끼우면 다섯 자리
+                      금액이 카드 밖으로 잘리고 페이지가 가로로 밀린다. 그렇다고 단가
+                      칸만 좁히면 이번엔 치는 값이 안 보인다 — 계산대에서 금액을 못 읽는
+                      쪽이 줄이 한 칸 늘어나는 것보다 나쁘다. 그래서 자리가 모자라면
+                      이 묶음을 통째로 아랫줄로 내린다. 데스크톱은 폭이 남아 안 내려간다.
+                      min-w-56 이 그 줄바꿈을 일으키는 값이라 임의로 낮추지 마라.
+                    */}
+                    <div className="flex min-w-56 flex-1 items-center justify-end gap-2">
                       <Input
                         aria-label={`${line.productName} 판매 단가`}
                         inputMode="numeric"
@@ -327,10 +336,10 @@ export function SellTerminal({ device }: { device: Device }) {
                             ),
                           )
                         }
-                        className="w-24 text-right"
+                        className="w-24 shrink-0 text-right"
                       />
                       <span
-                        className="text-ink w-24 text-right text-[0.9375rem] font-semibold"
+                        className="text-ink min-w-24 shrink-0 text-right text-[0.9375rem] font-semibold"
                         data-numeric
                       >
                         {formatWon(price * line.qty)}
