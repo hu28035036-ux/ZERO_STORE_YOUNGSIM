@@ -546,6 +546,16 @@ export type Database = {
       }
     }
     Functions: {
+      create_product: {
+        Args: {
+          p_category_id?: string
+          p_description?: string
+          p_name: string
+          p_option_schema?: Json
+          p_variants?: Json
+        }
+        Returns: string
+      }
       fn_option_label: {
         Args: { p_options: Json; p_schema: Json }
         Returns: string
