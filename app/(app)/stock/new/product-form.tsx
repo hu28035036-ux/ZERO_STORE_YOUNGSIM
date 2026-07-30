@@ -9,8 +9,8 @@ import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input, NumberInput, Select } from '@/components/ui/field'
 
 import { createProduct, type CreateProductState } from '../actions'
-
-export type CategoryOption = { id: string; label: string }
+import { type CategoryOption } from '../categories'
+import { Cell, toInt } from '../variant-fields'
 
 type Axis = { id: number; name: string; raw: string }
 
@@ -56,28 +56,6 @@ function parseValues(raw: string): string[] {
     if (v) seen.add(v)
   }
   return [...seen]
-}
-
-/** 입력창의 문자열을 정수로. 쉼표를 찍어 넣는 사람이 많아서 숫자만 남긴다. */
-function toInt(value: string): number {
-  const n = Number(value.replace(/[^\d]/g, ''))
-  return Number.isFinite(n) ? n : 0
-}
-
-/**
- * 모바일에서만 보이는 필드 라벨.
- *
- * 넓은 화면에는 위에 머리글 줄이 한 번 있으므로 줄마다 라벨을 반복하면 표가
- * 읽히지 않는다. 좁은 화면에는 머리글이 없으니 라벨이 있어야 한다.
- * 어느 쪽이든 입력에는 aria-label 이 붙으므로 스크린리더는 항상 읽을 수 있다.
- */
-function Cell({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-ink-muted text-xs sm:hidden">{label}</span>
-      {children}
-    </div>
-  )
 }
 
 const GRID = 'sm:grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1.4fr]'

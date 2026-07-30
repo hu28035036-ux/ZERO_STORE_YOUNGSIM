@@ -3,7 +3,8 @@ import { ChevronLeft } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
 
-import { ProductForm, type CategoryOption } from './product-form'
+import { toCategoryOptions } from '../categories'
+import { ProductForm } from './product-form'
 
 export const metadata = { title: '상품 등록' }
 
@@ -15,20 +16,7 @@ export default async function NewProductPage() {
     supabase.from('app_settings').select('default_low_stock').maybeSingle(),
   ])
 
-  const rows = categories.data ?? []
-  const nameById = new Map(rows.map((c) => [c.id, c.name]))
-
-  // 2단 계층을 "대분류 > 소분류" 한 줄로 편다.
-  // optgroup 을 쓰면 대분류 자체를 고를 수 없어서 소분류가 없는 카테고리가
-  // 선택지에서 사라진다.
-  const options: CategoryOption[] = rows
-    .map((c) => ({
-      id: c.id,
-      label: c.parent_id
-        ? `${nameById.get(c.parent_id) ?? '?'} > ${c.name}`
-        : c.name,
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'ko'))
+  const options = toCategoryOptions(categories.data ?? [])
 
   return (
     <div className="flex flex-col gap-4">
