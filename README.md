@@ -32,6 +32,17 @@ User Metadata 에 `display_name` 으로 넣으면 그대로 쓰이고, 없으면
 
 ## 배포 (Vercel)
 
+**이미 배포돼 있다: https://zero-store-youngsim.vercel.app** (2026-07-31)
+
+- 프로젝트: `hu28035036-2116s-projects/zero-store-youngsim`
+- 저장소가 연결돼 있고 환경변수 두 개는 Production / Preview / Development 에
+  모두 들어가 있다. 아래 1~2 는 이미 끝난 단계다.
+- **Preview 환경변수는 `claude/inventory-management-planning-fk6i1t` 브랜치에만
+  걸려 있다.** CLI(v54.7.1)가 "모든 preview 브랜치" 옵션을 비대화형으로 받지 못해
+  브랜치를 명시했다. 다른 브랜치로 preview 를 띄우려면 그 브랜치에도 넣어야 한다.
+
+아래는 처음부터 다시 만들 때의 절차다.
+
 1. Vercel 에서 **Add New > Project > Import Git Repository** 로 이 저장소를 고른다.
    프레임워크는 Next.js 로 자동 인식된다. 빌드 설정은 건드릴 것이 없다.
 2. **Environment Variables** 에 두 개를 넣는다. Production / Preview / Development
@@ -46,8 +57,19 @@ User Metadata 에 `display_name` 으로 넣으면 그대로 쓰이고, 없으면
    "Invalid API key" 같은 엉뚱한 메시지로 터지는 것보다 낫다고 보고 그렇게 두었다.
 3. 배포 후 Supabase 대시보드의 **Authentication > URL Configuration** 에서
    Site URL 을 배포된 주소로 바꾼다. 비밀번호 재설정 메일의 링크가 이 값을 쓴다.
+   **이 단계는 아직 안 했다** — MCP 에 auth 설정을 바꾸는 도구가 없어서 대시보드에서
+   직접 해야 한다. 지금은 앱에 비밀번호 재설정 흐름 자체가 없어서(계정은 관리자가
+   만든다) 당장 깨지는 것은 없다.
 
-이후로는 이 브랜치에 푸시할 때마다 자동 배포된다.
+### 어느 브랜치가 프로덕션인가
+
+Vercel 의 프로덕션 브랜치는 저장소 기본 브랜치(`main`)다. 작업은
+`claude/inventory-management-planning-fk6i1t` 에서 하고 있으므로 **거기에 푸시하면
+preview 배포가 된다.** https://zero-store-youngsim.vercel.app 를 갱신하려면 둘 중
+하나다:
+
+- 작업 폴더에서 `vercel --prod` (지금 올라가 있는 것이 이 방식이다)
+- `main` 에 머지 — 그러면 이후로는 푸시마다 자동으로 프로덕션이 갱신된다
 
 ## 데이터 모델
 
