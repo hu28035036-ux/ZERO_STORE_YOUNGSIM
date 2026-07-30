@@ -499,6 +499,35 @@ export type Database = {
         }
         Relationships: []
       }
+      v_movements: {
+        Row: {
+          category_name: string | null
+          counted_qty: number | null
+          created_by: string | null
+          created_by_name: string | null
+          id: number | null
+          note: string | null
+          occurred_at: string | null
+          option_label: string | null
+          product_id: string | null
+          product_name: string | null
+          purchase_amount: number | null
+          qty_delta: number | null
+          reverses_id: number | null
+          revenue_amount: number | null
+          sale_order_id: string | null
+          sku: string | null
+          stock_after: number | null
+          supplier_id: string | null
+          supplier_name: string | null
+          type: Database["public"]["Enums"]["stock_movement_type"] | null
+          unit_cost: number | null
+          unit_price: number | null
+          variant_id: string | null
+          voided_by: number | null
+        }
+        Relationships: []
+      }
       v_stock_integrity: {
         Row: {
           cached_qty: number | null

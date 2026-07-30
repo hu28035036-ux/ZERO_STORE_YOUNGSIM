@@ -1,5 +1,8 @@
 import type { Tables } from '@/lib/database.types'
 
+// 검색어 정제는 입출고·판매 화면도 그대로 쓴다. lib 에 두고 여기서는 다시 내보낸다.
+export { likePattern, nameSkuBarcodeFilter } from '@/lib/search'
+
 export type StockRow = Tables<'v_variant_stock'>
 
 export const FILTERS = ['all', 'low', 'negative'] as const
@@ -76,19 +79,4 @@ export function sortHref(current: StockQuery, key: SortKey): string {
     // 이름은 오름차순이 자연스럽고, 숫자 열은 큰 값부터 보는 게 쓸모 있다.
     desc: current.sort === key ? !current.desc : key !== 'name',
   })
-}
-
-/**
- * PostgREST `or()` 에 넣을 LIKE 패턴.
- *
- * or() 는 쉼표로 조건을 나누고 괄호로 묶는 문법이라, 사용자가 상품명에 친
- * 쉼표 하나에 필터가 통째로 깨져 400 이 난다. LIKE 와일드카드(`%` `_`)도
- * 빼둔다 — 검색창에 `%` 만 쳤을 때 전체가 걸리면 검색이 고장난 것처럼 보인다.
- *
- * 마침표는 남긴다. 값 부분의 점은 PostgREST 가 구분자로 보지 않고,
- * "1.5L" 같은 상품명이 실제로 흔하다.
- */
-export function likePattern(raw: string): string {
-  const cleaned = raw.replace(/[,()%_\\*]/g, ' ').trim()
-  return cleaned ? `%${cleaned}%` : ''
 }

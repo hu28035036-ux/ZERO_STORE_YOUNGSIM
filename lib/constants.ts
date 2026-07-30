@@ -41,6 +41,26 @@ export function formatQty(value: number | null | undefined): string {
  */
 export const TIME_ZONE = 'Asia/Seoul'
 
+/**
+ * 목록에 쓰는 짧은 일시. 항상 KST 로 그린다.
+ *
+ * 서버는 UTC 로 돌고 브라우저는 기기 시간대를 쓴다. 어느 쪽이든 기본값에
+ * 맡기면 같은 전표가 서버 렌더링과 클라이언트에서 다른 시각으로 보인다.
+ */
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: TIME_ZONE,
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(d)
+}
+
 /** KST 기준 오늘 날짜를 YYYY-MM-DD 로. 통계 기간 기본값에 쓴다. */
 export function todayInSeoul(now: Date = new Date()): string {
   // en-CA 로케일이 YYYY-MM-DD 를 준다. 직접 조립하는 것보다 실수가 적다.

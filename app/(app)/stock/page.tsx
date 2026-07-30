@@ -6,7 +6,14 @@ import { formatQty, formatWon } from '@/lib/constants'
 import { getDevice } from '@/lib/server-device'
 import { createClient } from '@/lib/supabase/server'
 
-import { LIST_LIMIT, likePattern, parseStockQuery, SORTS, type StockRow } from './query'
+import {
+  LIST_LIMIT,
+  likePattern,
+  nameSkuBarcodeFilter,
+  parseStockQuery,
+  SORTS,
+  type StockRow,
+} from './query'
 import { StockCards } from './stock-cards'
 import { StockTable } from './stock-table'
 import { StockToolbar } from './stock-toolbar'
@@ -36,9 +43,7 @@ export default async function StockPage({
   if (pattern) {
     // 상품명·SKU·바코드를 한 번에 훑는다. 계산대에서는 셋 중 무엇을 들고
     // 찾을지 그때그때 다르다.
-    list = list.or(
-      `product_name.ilike.${pattern},sku.ilike.${pattern},barcode.ilike.${pattern}`,
-    )
+    list = list.or(nameSkuBarcodeFilter(pattern))
   }
 
   list = list.order(SORTS[query.sort].column, { ascending: !query.desc })
