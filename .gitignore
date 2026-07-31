@@ -47,8 +47,11 @@ next-env.d.ts
 /public/sw.js.map
 /public/swe-worker-*.js
 
-# postinstall 로 복사되는 ZXing WASM 바이너리
-/public/wasm/
+# 빌드 때 node_modules 에서 복사해온다 (scripts/copy-zxing-wasm.mjs).
+# postinstall 이 아니라 build/dev 스크립트에서 매번 복사한다 — postinstall 은 설치
+# 방식에 따라 건너뛸 수 있고, 그러면 이 파일이 없어도 빌드가 조용히 통과해서
+# 아이폰에서만, 배포되고 나서야 스캔이 깨진다.
+/public/zxing_reader.wasm
 
 # subagent-driven-development 작업 기록 (스크래치)
 .superpowers
