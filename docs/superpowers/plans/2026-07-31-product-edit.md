@@ -281,9 +281,27 @@ end $$;
 comment on function public.update_product(uuid, text, uuid, text, jsonb) is
   '상품 기본 정보와 변형별 판매가·최소재고·대표 바코드를 한 트랜잭션에 저장';
 
-grant execute on function public.update_product(uuid, text, uuid, text, jsonb)
-  to authenticated;
+-- 0009 와 같은 이유로 PUBLIC 자동 권한을 회수하고 로그인 사용자에게만 준다.
+revoke execute on function
+  public.update_product(uuid, text, uuid, text, jsonb) from public, anon;
+grant execute on function
+  public.update_product(uuid, text, uuid, text, jsonb) to authenticated;
 ```
+
+**`revoke` 를 빠뜨리지 마라.** PostgreSQL 은 새 함수의 EXECUTE 를 PUBLIC 에
+자동으로 준다. `grant ... to authenticated` 만 쓰면 anon 키만 가진 사람도
+`/rest/v1/rpc/update_product` 를 부를 수 있다 (`20260730000009_grants.sql` 머리주석
+참고). RLS 가 막아주긴 하지만 이 저장소는 권한 자체를 회수하기로 했고
+`create_product`(0010:95-98)도 같은 페어를 쓴다. 확인은 이렇게 한다:
+
+```sql
+select p.proname, coalesce(array_to_string(p.proacl, E'\n'), '(기본값)') as acl
+  from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+ where n.nspname = 'public' and p.proname in ('create_product','update_product');
+```
+
+`update_product` 의 acl 에 맨 앞 `=X/postgres`(PUBLIC 을 뜻한다)나 `anon=X` 가
+남아 있으면 `revoke` 가 안 된 것이다.
 
 - [ ] **Step 2: 적용 전에 스모크부터 돌려서 함수가 없다는 것을 확인한다**
 
