@@ -29,10 +29,12 @@ secret 키는 이 앱에 두지 않는다. 모든 쓰기가 로그인 사용자 
 
 ## 카메라 바코드 스캔
 
-`/stock/new`(변형별 바코드 칸)와 `/movements/new`(찾기 칸)는 휴대폰 카메라로
-바코드를 찍어 입력칸을 채울 수 있다. 공용 컴포넌트는
-`components/scanner/barcode-scanner.tsx` 이고, 아직 `/sell` 에는 붙이지
-않았다 — 같은 컴포넌트를 그대로 가져다 붙일 수 있다.
+`/stock/new`(변형별 바코드 칸) · `/movements/new`(찾기 칸) · `/stock`(재고
+검색칸) · `/sales/new`(판매 적기 스캔칸)는 휴대폰 카메라로 바코드를 찍어
+입력칸을 채울 수 있다. 공용 컴포넌트는
+`components/scanner/barcode-scanner.tsx` 이고, GET 검색 폼 안에 끼울 때는
+`components/scanner/scan-button.tsx` 를 쓴다(폼의 hidden 필터를 그대로 실어
+보낸다).
 
 해독기는 기기에 따라 다른 경로를 탄다. 안드로이드 크롬은 브라우저 내장
 `BarcodeDetector` 를 그대로 쓴다. 아이폰 사파리는 그게 없어서(2026-07 기준,
@@ -193,11 +195,24 @@ UTC 로 자르면 밤 9시 이후 판매가 다음 날로 밀려 일별 매출�
 | 함수 | 용도 |
 | --- | --- |
 | `record_sale(items, memo, at)` | 장바구니 전체를 한 트랜잭션으로 판매 등록 |
+| `import_sales(groups, memo, force)` | 판매기록 파일 일괄 반영. 날짜별 영수증을 한 트랜잭션으로 |
+| `void_sale_order(order, reason)` | 영수증 단위 판매 취소 + 합계 재계산 |
+| `void_import_batch(batch, reason)` | 임포트 배치(파일 한 번) 통째 취소 |
 | `record_stock_movement(...)` | 입고 / 출고 / 조정 단건 |
 | `record_stocktake(variant, counted)` | 실사. 델타는 트리거가 계산 |
-| `void_movement(id, reason)` | 반대 전표로 정정 |
+| `void_movement(id, reason)` | 반대 전표로 정정 (입출고용 — 판매는 위 두 함수로) |
 | `lookup_by_barcode(code)` | 스캐너 hot path. `barcodes.code` 가 PK 라 단일 조회 |
 | `stats_summary / top_products / by_category / by_supplier / turnover` | 통계 화면 |
+
+**임포트는 내용 지문으로 중복을 막는다.** 같은 판매기록 파일을 두 번 올리면
+재고가 두 번 빠지는데, 판매 전표는 화면에서 개별 정정이 안 되므로 사고가 나면
+복구가 어렵다. 그래서 `sale_orders.import_fingerprint` (정규화된 날짜·변형·수량·
+단가의 SHA-256, 영수증마다 하나)에 부분 유니크 인덱스를 걸어 DB 차원에서
+거부한다. 직접 쓰기(`record_sale`)는 지문이 NULL 이라 영향이 없다 — 같은 날
+같은 커피를 두 번 파는 것은 정상이다. 판매 취소의 반대 전표는 **원본과 같은
+날짜**에 앉는다(`void_movement` 가 정정 시점을 남기는 것과 다르다) — 임포트
+취소는 반품이 아니라 "잘못 넣은 기록의 취소"라서, 일별 매출이 그 판매가 없던
+모습으로 돌아가야 한다.
 
 `stats_turnover()` 의 회전율은 **추정치**다. 정확한 값은 기간 중 평균 재고가 필요하고
 그러려면 일별 스냅샷이 있어야 한다. v1 은 기간 매출원가 ÷ 현재 재고자산을 연환산하며,
