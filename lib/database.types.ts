@@ -323,6 +323,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_movements_reverses_id_fkey"
+            columns: ["reverses_id"]
+            isOneToOne: false
+            referencedRelation: "v_movements"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_movements_sale_order_id_fkey"
             columns: ["sale_order_id"]
             isOneToOne: false
@@ -513,8 +520,8 @@ export type Database = {
           product_name: string | null
           purchase_amount: number | null
           qty_delta: number | null
-          reverses_id: number | null
           revenue_amount: number | null
+          reverses_id: number | null
           sale_order_id: string | null
           sku: string | null
           stock_after: number | null
@@ -526,7 +533,64 @@ export type Database = {
           variant_id: string | null
           voided_by: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_reverses_id_fkey"
+            columns: ["reverses_id"]
+            isOneToOne: false
+            referencedRelation: "stock_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_reverses_id_fkey"
+            columns: ["reverses_id"]
+            isOneToOne: false
+            referencedRelation: "v_movements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_sale_order_id_fkey"
+            columns: ["sale_order_id"]
+            isOneToOne: false
+            referencedRelation: "sale_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "v_low_stock"
+            referencedColumns: ["variant_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "v_stock_integrity"
+            referencedColumns: ["variant_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "v_variant_stock"
+            referencedColumns: ["variant_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "variants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       v_stock_integrity: {
         Row: {
@@ -681,6 +745,16 @@ export type Database = {
           stock_value_now: number
           turnover_annual: number
         }[]
+      }
+      update_product: {
+        Args: {
+          p_category_id?: string
+          p_description?: string
+          p_name: string
+          p_product_id: string
+          p_variants?: Json
+        }
+        Returns: undefined
       }
       void_movement: {
         Args: { p_id: number; p_reason?: string }

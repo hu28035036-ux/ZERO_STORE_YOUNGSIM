@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
+import { fail, ok, type ActionState } from '@/lib/action-state'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 
@@ -127,4 +128,82 @@ export async function createProduct(
   // 방금 넣은 상품이 목록 어디에 있는지 찾게 하지 않는다. 이름으로 걸러진
   // 화면으로 보낸다. redirect() 는 예외를 던지므로 try 안에 두면 안 된다.
   redirect(`/stock?q=${encodeURIComponent(name)}`)
+}
+
+// ---------------------------------------------------------------------------
+// 수정
+// ---------------------------------------------------------------------------
+
+const editVariantSchema = z.object({
+  variantId: z.uuid(),
+  salePrice: z.number().int().min(0).max(1_000_000_000),
+  lowStockThreshold: z.number().int().min(0).max(1_000_000),
+  // 4자 하한은 DB 의 check 제약과 같은 값이다. 여기서 먼저 걸러야 사용자가
+  // 제약 위반 원문을 보는 일이 없다.
+  barcode: z
+    .string()
+    .trim()
+    .min(4, { error: '바코드는 4자 이상이어야 합니다' })
+    .max(64)
+    .nullable(),
+})
+
+const editPayloadSchema = z.object({
+  productId: z.uuid(),
+  name: z.string().trim().min(1, { error: '상품명을 입력하세요' }).max(120),
+  categoryId: z.uuid().nullable(),
+  description: z.string().trim().max(500).nullable(),
+  variants: z.array(editVariantSchema).max(200),
+})
+
+export async function updateProduct(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireUser()
+
+  const raw = formData.get('payload')
+  if (typeof raw !== 'string') return fail('폼 데이터를 읽지 못했습니다')
+
+  let json: unknown
+  try {
+    json = JSON.parse(raw)
+  } catch {
+    return fail('폼 데이터를 읽지 못했습니다')
+  }
+
+  const parsed = editPayloadSchema.safeParse(json)
+  if (!parsed.success) return fail(parsed.error.issues[0].message)
+
+  const { productId, name, categoryId, description, variants } = parsed.data
+
+  // 폼 안에서 바코드가 겹치는 경우. DB 도 막지만 어느 값인지 알려주려면
+  // 여기서 먼저 봐야 한다.
+  const codes = variants.map((v) => v.barcode).filter((c): c is string => Boolean(c))
+  const dupe = codes.find((c, i) => codes.indexOf(c) !== i)
+  if (dupe) return fail(`바코드 ${dupe} 가 여러 줄에 중복으로 들어갔습니다`)
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('update_product', {
+    p_product_id: productId,
+    p_name: name,
+    p_category_id: categoryId ?? undefined,
+    p_description: description ?? undefined,
+    p_variants: variants.map((v) => ({
+      variant_id: v.variantId,
+      sale_price: v.salePrice,
+      low_stock_threshold: v.lowStockThreshold,
+      barcode: v.barcode,
+    })),
+  })
+
+  if (error) return fail(humanize(error))
+
+  // 재고 목록과 수정 화면 둘 다 방금 값을 보여줘야 한다.
+  revalidatePath('/stock')
+  revalidatePath(`/stock/${productId}/edit`)
+
+  // createProduct 와 달리 redirect 하지 않는다. 가격을 고치고 나서 재고를
+  // 확인하는 흐름이 자연스럽고, 여러 변형을 연달아 고치는 일도 잦다.
+  return ok('저장했습니다')
 }
