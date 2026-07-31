@@ -17,15 +17,19 @@ export function LoginForm({ next }: { next: string }) {
     <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next} />
 
+      {/* type 을 email 로 두면 브라우저가 "@ 를 넣으라"고 막아서 아이디만으로는
+          제출 자체가 안 된다. 뒤에 붙는 도메인은 서버가 안다 (lib/username.ts). */}
       <Input
-        label="이메일"
-        name="email"
-        type="email"
+        label="아이디"
+        name="username"
+        type="text"
         // 계산대에서 아이디를 매번 치지 않도록 자동완성을 살려둔다.
         autoComplete="username"
         autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
         required
-        placeholder="you@example.com"
+        placeholder="아이디"
       />
 
       <Input

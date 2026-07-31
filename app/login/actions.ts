@@ -5,11 +5,20 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 
 import { createClient } from '@/lib/supabase/server'
+import { usernameToEmail } from '@/lib/username'
 
 // 가입 화면은 없다. 같이 쓰는 사람만 들어오는 가게 앱이라
 // 계정은 Supabase 대시보드에서 초대로 만든다. 열어두면 관리할 일만 는다.
+//
+// 이메일이 아니라 아이디를 받는다. Supabase 는 이메일로 로그인하므로
+// usernameToEmail() 이 고정 도메인을 붙인다 (lib/username.ts 에 이유가 있다).
+// 여기서 형식을 이메일로 검사하면 아이디만 친 사람이 통과하지 못한다.
 const schema = z.object({
-  email: z.email({ error: '이메일 형식이 아닙니다' }),
+  username: z
+    .string()
+    .trim()
+    .min(1, { error: '아이디를 입력하세요' })
+    .max(60, { error: '아이디가 너무 깁니다' }),
   password: z.string().min(1, { error: '비밀번호를 입력하세요' }),
 })
 
@@ -34,7 +43,7 @@ export async function login(
   formData: FormData,
 ): Promise<LoginState> {
   const parsed = schema.safeParse({
-    email: formData.get('email'),
+    username: formData.get('username'),
     password: formData.get('password'),
   })
 
@@ -43,7 +52,10 @@ export async function login(
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithPassword(parsed.data)
+  const { error } = await supabase.auth.signInWithPassword({
+    email: usernameToEmail(parsed.data.username),
+    password: parsed.data.password,
+  })
 
   if (error) {
     // 자격 증명이 틀린 경우(4xx)와 서버에 닿지 못한 경우를 갈라야 한다.
@@ -56,7 +68,7 @@ export async function login(
     // 알려주면 가입된 이메일 목록을 알아내는 데 쓸 수 있다.
     const status = error.status ?? 0
     if (status >= 400 && status < 500) {
-      return { error: '이메일 또는 비밀번호가 올바르지 않습니다' }
+      return { error: '아이디 또는 비밀번호가 올바르지 않습니다' }
     }
     return { error: '지금 로그인 서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요' }
   }
