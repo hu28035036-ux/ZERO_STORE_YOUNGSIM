@@ -1,8 +1,9 @@
 'use client'
 
 import { useActionState, useMemo, useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Camera, Plus, Trash2 } from 'lucide-react'
 
+import { BarcodeScanner } from '@/components/scanner/barcode-scanner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
@@ -79,6 +80,9 @@ export function ProductForm({
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   const [bulk, setBulk] = useState({ salePrice: '', unitCost: '', threshold: '' })
   const [nextAxisId, setNextAxisId] = useState(1)
+  // 변형이 여러 줄이라 "지금 어느 줄의 카메라를 열었는지"를 따로 기억해야 한다.
+  // 이게 없으면 스캔 결과가 항상 첫 줄(또는 마지막에 렌더된 줄)로 들어간다.
+  const [scanningKey, setScanningKey] = useState<string | null>(null)
 
   const parsedAxes = useMemo(
     () =>
@@ -399,15 +403,32 @@ export function ProductForm({
                 </Cell>
                 <div className="col-span-2 sm:col-span-1">
                   <Cell label="바코드">
-                    <Input
-                      aria-label={`${label} 바코드`}
-                      placeholder="선택"
-                      inputMode="numeric"
-                      autoComplete="off"
-                      value={d.barcode}
-                      onChange={(e) => setDraft(key, { barcode: e.target.value })}
-                      maxLength={64}
-                    />
+                    {/* min-w-0 이 없으면 flex 아이템의 기본 최소폭이 콘텐츠 크기라
+                        카메라 버튼이 좁은 화면에서 칸을 밀어내 잘린다(커밋 ac46d4b
+                        와 같은 종류의 사고) — Input 만 줄어들고 버튼은 shrink-0 로
+                        고정폭을 지키게 한다. */}
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        aria-label={`${label} 바코드`}
+                        placeholder="선택"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        value={d.barcode}
+                        onChange={(e) => setDraft(key, { barcode: e.target.value })}
+                        maxLength={64}
+                        className="min-w-0 flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        aria-label={`${label} 바코드 카메라로 스캔`}
+                        onClick={() => setScanningKey(key)}
+                        className="shrink-0"
+                      >
+                        <Camera size={16} aria-hidden />
+                      </Button>
+                    </div>
                   </Cell>
                 </div>
               </div>
@@ -428,6 +449,17 @@ export function ProductForm({
       <Button type="submit" size="lg" full disabled={!canSubmit}>
         {pending ? '등록 중…' : '등록'}
       </Button>
+
+      {/* scanningKey 가 null 이 아닌 동안만 뜬다. onDetect 는 렌더마다 새로 만들어지지만
+          BarcodeScanner 내부에서 항상 최신 콜백을 ref 로 읽으므로 scanningKey 가 바뀐
+          뒤에도 그 줄을 놓치지 않는다. */}
+      <BarcodeScanner
+        open={scanningKey !== null}
+        onDetect={(code) => {
+          if (scanningKey) setDraft(scanningKey, { barcode: code })
+        }}
+        onClose={() => setScanningKey(null)}
+      />
     </form>
   )
 }

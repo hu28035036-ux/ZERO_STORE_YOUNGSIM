@@ -8,6 +8,7 @@ import { likePattern, nameSkuBarcodeFilter } from '@/lib/search'
 import { createClient } from '@/lib/supabase/server'
 
 import { MovementForm, type SupplierOption, type VariantTarget } from './movement-form'
+import { ScanSearchButton } from './scan-search-button'
 
 export const metadata = { title: '입출고 등록' }
 
@@ -93,7 +94,11 @@ export default async function NewMovementPage({
         <>
           <Card className="p-4">
             <form action="/movements/new" className="flex gap-2">
-              <div className="relative flex-1">
+              {/* min-w-0: 버튼이 두 개(찾기 + 카메라)로 늘면서 flex 기본 최소폭이
+                  콘텐츠 크기인 채로 있으면 좁은 화면에서 이 칸이 밀려 잘릴 수 있다
+                  (커밋 ac46d4b 와 같은 종류의 사고). 자리가 모자라면 입력칸이
+                  줄어들게 한다. */}
+              <div className="relative min-w-0 flex-1">
                 <Search
                   size={18}
                   aria-hidden
@@ -119,6 +124,9 @@ export default async function NewMovementPage({
               >
                 찾기
               </button>
+              {/* type="button" 이라 폼 제출을 가로채지 않는다 — 클릭하면 카메라
+                  오버레이만 열리고, 실제 조회는 스캔 후 ?q= 이동으로 일어난다. */}
+              <ScanSearchButton />
             </form>
           </Card>
 
