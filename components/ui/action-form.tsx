@@ -60,16 +60,28 @@ export function ActionForm({
       <div className="flex items-center gap-2">
         {confirmLabel && !armed ? (
           <Button
+            // key 로 아래 submit 버튼과 다른 DOM 노드로 강제한다. 없으면 React 가
+            // 같은 자리의 버튼 노드를 재사용해 type 만 button → submit 으로 바꾸고,
+            // 브라우저는 클릭의 기본 동작(제출)을 리렌더 "뒤"에 실행하므로 —
+            // 한 번의 클릭이 armed 를 켜면서 그대로 제출까지 해버린다.
+            // 2단계 확인이 통째로 뚫리는 버그였고, Playwright 재현으로 잡았다.
+            key="arm"
             variant={submitVariant}
             size={submitSize}
             full={full}
-            onClick={() => setArmed(true)}
+            onClick={(e) => {
+              // 같은 이유의 보험. 리렌더 후 이 노드가 submit 이 되어 있어도
+              // 기본 동작을 막아 둔다.
+              e.preventDefault()
+              setArmed(true)
+            }}
           >
             {submitLabel}
           </Button>
         ) : (
           <>
             <Button
+              key="submit"
               type="submit"
               variant={confirmLabel ? 'danger' : submitVariant}
               size={submitSize}
