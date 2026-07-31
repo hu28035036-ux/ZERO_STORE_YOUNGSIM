@@ -82,7 +82,14 @@ export function StockTable({
               key={row.variant_id}
               className="border-border-base hover:bg-surface-sunken border-b last:border-0"
             >
-              <td className="text-ink px-3 py-2.5 font-medium">{row.product_name}</td>
+              <td className="px-3 py-2.5 font-medium">
+                <Link
+                  href={`/stock/${row.product_id}/edit`}
+                  className="text-ink hover:text-primary"
+                >
+                  {row.product_name}
+                </Link>
+              </td>
               <td className="text-ink-muted px-3 py-2.5">{row.option_label ?? '—'}</td>
               <td className="text-ink-muted px-3 py-2.5">{row.category_name ?? '—'}</td>
               <td className="text-ink-subtle px-3 py-2.5 text-xs" data-numeric>
