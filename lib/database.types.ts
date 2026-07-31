@@ -225,9 +225,12 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          import_batch_id: string | null
+          import_fingerprint: string | null
           item_count: number
           memo: string | null
           occurred_at: string
+          source: string
           total_cost: number
           total_revenue: number
         }
@@ -235,9 +238,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          import_batch_id?: string | null
+          import_fingerprint?: string | null
           item_count?: number
           memo?: string | null
           occurred_at?: string
+          source?: string
           total_cost?: number
           total_revenue?: number
         }
@@ -245,9 +251,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          import_batch_id?: string | null
+          import_fingerprint?: string | null
           item_count?: number
           memo?: string | null
           occurred_at?: string
+          source?: string
           total_cost?: number
           total_revenue?: number
         }
@@ -462,6 +471,13 @@ export type Database = {
             foreignKeyName: "variants_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
+            referencedRelation: "v_movements"
+            referencedColumns: ["product_id"]
+          },
+          {
+            foreignKeyName: "variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "v_variant_stock"
             referencedColumns: ["product_id"]
           },
@@ -653,6 +669,16 @@ export type Database = {
         Args: { p_options: Json; p_schema: Json }
         Returns: string
       }
+      import_sales: {
+        Args: { p_force?: boolean; p_groups: Json; p_memo?: string }
+        Returns: {
+          batch_id: string
+          item_count: number
+          occurred_at: string
+          order_id: string
+          revenue: number
+        }[]
+      }
       lookup_by_barcode: {
         Args: { p_code: string }
         Returns: {
@@ -756,8 +782,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      void_import_batch: {
+        Args: { p_batch_id: string; p_reason?: string }
+        Returns: number
+      }
       void_movement: {
         Args: { p_id: number; p_reason?: string }
+        Returns: number
+      }
+      void_sale_order: {
+        Args: { p_order_id: string; p_reason?: string }
         Returns: number
       }
     }
