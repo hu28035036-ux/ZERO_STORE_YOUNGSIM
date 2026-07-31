@@ -92,5 +92,8 @@ end $$;
 comment on function public.update_product(uuid, text, uuid, text, jsonb) is
   '상품 기본 정보와 변형별 판매가·최소재고·대표 바코드를 한 트랜잭션에 저장';
 
-grant execute on function public.update_product(uuid, text, uuid, text, jsonb)
-  to authenticated;
+-- 0009 와 같은 이유로 PUBLIC 자동 권한을 회수하고 로그인 사용자에게만 준다.
+revoke execute on function
+  public.update_product(uuid, text, uuid, text, jsonb) from public, anon;
+grant execute on function
+  public.update_product(uuid, text, uuid, text, jsonb) to authenticated;
