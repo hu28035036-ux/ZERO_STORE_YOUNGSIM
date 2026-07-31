@@ -24,7 +24,7 @@ node -e 'fetch("https://jnacpoqvnajjjfwwotnw.supabase.co/auth/v1/health").then(r
 명시한다. 사용자가 환경 설정에서 호스트를 허용 목록에 넣어줘야 진행된다.
 `401 No API key found` 가 나오면 **닿은 것이다** — 통과다.
 
-증상이 헷갈릴 수 있다: 차단되면 로그인 화면이 **"이메일 또는 비밀번호가 올바르지
+증상이 헷갈릴 수 있다: 차단되면 로그인 화면이 **"아이디 또는 비밀번호가 올바르지
 않습니다"** 가 아니라 **"지금 로그인 서버에 연결할 수 없습니다"** 를 띄운다.
 (전자가 뜨면 진짜 자격 증명 문제다 — 이 구분은 73d896e 에서 넣었다.)
 **다만 뒤 문구는 egress 차단만 뜻하지 않는다.** 4xx 가 아닌 모든 오류가 저 문구로
@@ -58,7 +58,16 @@ lsof -ti:3000 -sTCP:LISTEN | xargs -r kill
 
 ## 3. 로그인 계정
 
-DB 에 데모 계정이 있다 (`docs/HANDOFF.md` 참고). 없으면 `auth.users` 에 직접
+**화면은 아이디만 받고, Supabase 에는 여전히 이메일이 저장된다.** Supabase Auth
+자체는 이메일로만 로그인하므로, `lib/username.ts` 의 `usernameToEmail()` 이
+서버에서 입력값 뒤에 `@zerostore.kr` 을 붙여 이메일을 만든다(이미 `@` 가
+있으면 그대로 둔다). `auth.users.email` 에 실제로 들어가는 값은 항상 이 변환을
+거친 이메일이다. **새 계정을 만들 때는 이메일을 `<아이디>@zerostore.kr` 로
+지어야** 그 아이디로 로그인이 된다 — 대시보드에서 이메일을 다른 도메인으로
+지으면(예: `sujin@gmail.com`) 로그인 칸에 `sujin` 을 쳐도 서버가 조회하는
+이메일은 `sujin@zerostore.kr` 이라 어긋난다.
+
+DB 에 로그인 계정이 있다 (`docs/HANDOFF.md` 참고). 없으면 `auth.users` 에 직접
 넣어야 하는데, **세 가지** 함정이 있다:
 
 - 비밀번호는 `extensions.crypt(pw, extensions.gen_salt('bf'))` — pgcrypto 가
@@ -91,8 +100,11 @@ where email = '<만든 이메일>';
 (500 은 4xx 가 아니므로). 즉 이 문구는 egress 차단만 뜻하지 않는다. 문구만 보고
 네트워크를 의심하지 말고 `get_logs(service: 'auth')` 로 실제 오류를 봐라.
 
+로그인 화면(아이디 칸)에 치는 값. Supabase 에는 `cwyh5088@zerostore.kr` 로
+저장돼 있다 — 이메일로 로그인하려 하면 막힌다, 위 설명대로 아이디만 쳐야 한다.
+
 ```
-demo@example.com / demo-1234!
+cwyh5088 / dnjs1ghk5.
 ```
 
 ## 4. 브라우저로 몰기
@@ -140,16 +152,21 @@ const ctx = await browser.newContext({
 const page = await ctx.newPage()
 
 await page.goto('http://localhost:3000/login', { waitUntil: 'domcontentloaded' })
-await page.waitForSelector('input[name="email"]')
-await page.fill('input[name="email"]', 'demo@example.com')
-await page.fill('input[name="password"]', 'demo-1234!')
+await page.waitForSelector('input[name="username"]')
+await page.fill('input[name="username"]', 'cwyh5088')
+await page.fill('input[name="password"]', 'dnjs1ghk5.')
 await page.click('button[type="submit"]')
 
 // redirect() 는 클라이언트 내비게이션이라 'load' 가 안 뜬다.
 // waitForURL 기본값으로 기다리면 타임아웃 난다. 결과를 직접 봐라.
 await page.waitForTimeout(3000)
 console.log('URL:', page.url())
-console.log('메시지:', await page.locator('p[aria-live]').innerText())
+// 로그인이 성공하면 리다이렉트되어 /login 의 p[aria-live] 가 사라진다.
+// 무조건 읽으면 Timeout 으로 스크립트 전체가 죽는다 — 실제로 겪었다.
+// 아직 /login 에 남아있을 때(= 실패)만 오류 문구를 읽는다.
+if (page.url().includes('/login')) {
+  console.log('메시지:', await page.locator('p[aria-live]').innerText())
+}
 
 await page.screenshot({ path: '/tmp/shot.png' })
 await browser.close()

@@ -152,6 +152,12 @@ RPC 가 뷰와 같은 규칙(`is_primary desc, created_at`)으로 대표 한 줄
 `createProduct` 처럼 redirect 하지 않고 `ok('저장했습니다')` 로 화면에 남는다 —
 가격을 고치고 나서 재고를 확인하는 흐름이 자연스럽다.
 
+> **구현 후 정정:** 실제로는 `action-form.tsx` 를 그대로 쓰지 않았다. 그 컴포넌트는
+> 저장 버튼을 바로 안에 두는데, 이 화면은 저장 버튼이 카드 두 개(기본 정보 +
+> 재고 단위) 아래에 와야 해서 `edit-form.tsx` 가 `<form>` 과 버튼을 직접 짰다.
+> `aria-live` 오류/성공 문단만 `action-form.tsx` 와 같은 모양으로 다시 옮겨
+> 적었다 (`app/(app)/stock/[productId]/edit/edit-form.tsx` 참고).
+
 ## 검증
 
 - SQL 스모크(롤백 트랜잭션): 값 수정, 남의 변형 거부, 없는 상품 거부, 바코드
