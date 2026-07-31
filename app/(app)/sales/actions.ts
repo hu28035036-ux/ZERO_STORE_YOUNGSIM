@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 import { requireUser } from '@/lib/auth'
+import { todayInSeoul } from '@/lib/constants'
 import { likePattern, nameSkuBarcodeFilter } from '@/lib/search'
 import { createClient } from '@/lib/supabase/server'
 
@@ -119,19 +120,33 @@ export async function recordSale(
 
   const memo = String(formData.get('memo') ?? '').trim().slice(0, 200) || undefined
 
+  const today = todayInSeoul()
+  const date = String(formData.get('date') ?? '').trim()
+  if (date && date > today) {
+    // 아직 일어나지 않은 일을 원장에 넣으면 통계가 미래로 샌다.
+    return { status: 'error', error: '앞날짜로는 등록할 수 없습니다' }
+  }
+  // 오늘이면 now() 그대로 두어 시각까지 남긴다. 지난 날짜면 그 날 정오로
+  // 박는다 — KST 오프셋을 명시해야 날짜 버킷이 하루 밀리지 않는다
+  // (movements/actions.ts 와 같은 규칙).
+  const occurredAt = date && date !== today ? `${date}T12:00:00+09:00` : undefined
+
   const supabase = await createClient()
   const { data, error } = await supabase.rpc('record_sale', {
     p_items: parsed.data,
     p_memo: memo,
+    p_occurred_at: occurredAt,
   })
 
   if (error) return { status: 'error', error: humanize(error) }
 
-  // 판매는 재고와 원장을 동시에 움직인다. 두 화면 다 무효화해야 계산대에서
-  // 재고 화면을 열었을 때 방금 판 것이 반영되어 있다.
+  // 판매는 재고·원장·오늘 매출(홈)·기간 매출(통계)을 전부 움직인다.
+  // 하나라도 빼면 그 화면만 어제 숫자를 보여준다.
+  revalidatePath('/')
   revalidatePath('/stock')
   revalidatePath('/movements')
-  revalidatePath('/sell')
+  revalidatePath('/stats')
+  revalidatePath('/sales')
 
   const total = parsed.data.reduce((sum, i) => sum + i.qty * i.unit_price, 0)
   const count = parsed.data.reduce((sum, i) => sum + i.qty, 0)

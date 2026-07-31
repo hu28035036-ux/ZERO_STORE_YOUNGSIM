@@ -1,17 +1,18 @@
 'use client'
 
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react'
-import { Minus, Plus, ScanLine, Trash2 } from 'lucide-react'
+import { Camera, Minus, Plus, ScanLine, Trash2 } from 'lucide-react'
 
+import { BarcodeScanner } from '@/components/scanner/barcode-scanner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/field'
 import { cn } from '@/lib/cn'
-import { formatQty, formatWon } from '@/lib/constants'
+import { formatQty, formatWon, todayInSeoul } from '@/lib/constants'
 import type { Device } from '@/lib/device'
 
-import { findItems, recordSale, type FoundItem, type SaleState } from './actions'
+import { findItems, recordSale, type FoundItem, type SaleState } from '../actions'
 
 type CartLine = {
   variantId: string
@@ -39,7 +40,7 @@ const STICKY: Record<Device, string> = {
   desktop: 'bottom-0',
 }
 
-export function SellTerminal({ device }: { device: Device }) {
+export function SaleLinesForm({ device }: { device: Device }) {
   const [state, formAction, saving] = useActionState<SaleState, FormData>(
     recordSale,
     null,
@@ -49,7 +50,11 @@ export function SellTerminal({ device }: { device: Device }) {
   const [query, setQuery] = useState('')
   const [candidates, setCandidates] = useState<FoundItem[]>([])
   const [notice, setNotice] = useState<string | null>(null)
+  const [cameraOpen, setCameraOpen] = useState(false)
   const [searching, startSearch] = useTransition()
+
+  // 렌더마다 부르면 자정을 넘는 순간 서버 HTML 과 어긋난다. 처음 한 번만 만든다.
+  const [today] = useState(() => todayInSeoul())
 
   const scanRef = useRef<HTMLInputElement>(null)
   const doneRef = useRef<string | null>(null)
@@ -95,9 +100,8 @@ export function SellTerminal({ device }: { device: Device }) {
     scanRef.current?.focus()
   }
 
-  function handleScan(e: React.FormEvent) {
-    e.preventDefault()
-    const q = query.trim()
+  function lookup(raw: string) {
+    const q = raw.trim()
     if (!q) return
 
     startSearch(async () => {
@@ -112,6 +116,11 @@ export function SellTerminal({ device }: { device: Device }) {
         setNotice(null)
       }
     })
+  }
+
+  function handleScan(e: React.FormEvent) {
+    e.preventDefault()
+    lookup(query)
   }
 
   const total = useMemo(
@@ -135,7 +144,7 @@ export function SellTerminal({ device }: { device: Device }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-ink text-lg font-semibold tracking-tight">판매</h1>
+        <h1 className="text-ink text-lg font-semibold tracking-tight">판매 적기</h1>
         {cart.length > 0 ? (
           <Button
             variant="ghost"
@@ -152,8 +161,8 @@ export function SellTerminal({ device }: { device: Device }) {
 
       {/* 판매 폼과 별개의 폼이다. 폼은 중첩될 수 없고, 스캔의 엔터가 판매를
           확정시키면 안 된다. */}
-      <form onSubmit={handleScan}>
-        <div className="relative">
+      <form onSubmit={handleScan} className="flex gap-2">
+        <div className="relative min-w-0 flex-1">
           <ScanLine
             size={20}
             aria-hidden
@@ -174,7 +183,27 @@ export function SellTerminal({ device }: { device: Device }) {
             className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-touch-lg w-full rounded-lg border pr-3 pl-11 text-base outline-none"
           />
         </div>
+        {/* 컨트롤드 입력이라 공용 ScanButton(DOM 에 값을 직접 넣는 방식)을 못
+            쓴다 — React 가 되돌린다. 조회 함수를 직접 부른다. */}
+        <Button
+          type="button"
+          variant="secondary"
+          size="lg"
+          className="shrink-0"
+          aria-label="카메라로 바코드 찍기"
+          onClick={() => setCameraOpen(true)}
+        >
+          <Camera size={20} aria-hidden />
+        </Button>
       </form>
+      <BarcodeScanner
+        open={cameraOpen}
+        onDetect={(code) => {
+          setQuery(code)
+          lookup(code)
+        }}
+        onClose={() => setCameraOpen(false)}
+      />
 
       {searching ? <p className="text-ink-muted text-sm">찾는 중…</p> : null}
 
@@ -353,7 +382,23 @@ export function SellTerminal({ device }: { device: Device }) {
         </ul>
       )}
 
+      {/* 이미 일어난 판매를 나중에 적는 화면이라 날짜가 필요하다. 확정 폼은
+          sticky 막대라 여기 두면 계산이 어수선해져서, 밖에 두고 form 속성으로
+          잇는다. 실사와 달리 판매는 지난 날짜 등록이 정상 경로다. */}
+      <Card className="p-4">
+        <Input
+          label="판매한 날"
+          name="date"
+          type="date"
+          form="sale-form"
+          defaultValue={today}
+          max={today}
+          hint="어제 판 것을 오늘 적을 때 바꾸세요. 시각은 남지 않습니다."
+        />
+      </Card>
+
       <form
+        id="sale-form"
         action={formAction}
         className={cn(
           'bg-surface border-border-base sticky z-10 -mx-4 border-t px-4 py-3',

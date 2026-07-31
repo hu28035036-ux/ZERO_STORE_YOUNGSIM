@@ -64,7 +64,9 @@ export function MobileShell({
                   )}
                 >
                   <Icon size={20} aria-hidden />
-                  <span className="text-[0.6875rem] font-medium">{item.label}</span>
+                  <span className="text-[0.6875rem] font-medium">
+                    {item.tabLabel ?? item.label}
+                  </span>
                 </Link>
               </li>
             )
