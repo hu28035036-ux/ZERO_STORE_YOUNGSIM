@@ -7,10 +7,11 @@ import { BarcodeScanner } from '@/components/scanner/barcode-scanner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input, NumberInput, Select } from '@/components/ui/field'
+import { Input, NumberInput } from '@/components/ui/field'
 
 import { createProduct, type CreateProductState } from '../actions'
 import { type CategoryOption } from '../categories'
+import { CategorySelect } from '../category-select'
 import { Cell, toInt } from '../variant-fields'
 
 type Axis = { id: number; name: string; raw: string }
@@ -19,6 +20,7 @@ type Draft = {
   salePrice: string
   unitCost: string
   qty: string
+  pack: string
   barcode: string
   threshold: string
 }
@@ -59,13 +61,16 @@ function parseValues(raw: string): string[] {
   return [...seen]
 }
 
-const GRID = 'sm:grid-cols-[1.6fr_1fr_1fr_1fr_1fr_1.4fr]'
+const GRID = 'sm:grid-cols-[1.6fr_1fr_1fr_0.8fr_0.8fr_1fr_1.4fr]'
 
 export function ProductForm({
   categories,
+  channels,
   defaultLowStock,
 }: {
   categories: CategoryOption[]
+  /** 기존 상품들이 쓰는 유통방식 값 — datalist 로 제안만 하고 새 값도 받는다 */
+  channels: string[]
   defaultLowStock: number
 }) {
   const [state, formAction, pending] = useActionState<CreateProductState, FormData>(
@@ -75,6 +80,7 @@ export function ProductForm({
 
   const [name, setName] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [channel, setChannel] = useState('')
   const [description, setDescription] = useState('')
   const [axes, setAxes] = useState<Axis[]>([])
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
@@ -100,6 +106,7 @@ export function ProductForm({
       salePrice: '',
       unitCost: '',
       qty: '',
+      pack: '',
       barcode: '',
       threshold: String(defaultLowStock),
     }),
@@ -119,6 +126,7 @@ export function ProductForm({
       JSON.stringify({
         name: name.trim(),
         categoryId: categoryId || null,
+        channel: channel.trim() || null,
         description: description.trim() || null,
         optionSchema: parsedAxes,
         variants: combos.map((options) => {
@@ -128,12 +136,13 @@ export function ProductForm({
             sale_price: toInt(d.salePrice),
             initial_unit_cost: toInt(d.unitCost),
             initial_qty: toInt(d.qty),
+            units_per_pack: toInt(d.pack),
             low_stock_threshold: toInt(d.threshold),
             barcode: d.barcode.trim() || null,
           }
         }),
       }),
-    [name, categoryId, description, parsedAxes, combos, axisNames, drafts, emptyDraft],
+    [name, categoryId, channel, description, parsedAxes, combos, axisNames, drafts, emptyDraft],
   )
 
   // 이름만 쓰고 값을 안 넣었거나 그 반대인 축은 조용히 무시된다.
@@ -186,23 +195,28 @@ export function ProductForm({
             required
             maxLength={120}
           />
-          <Select
-            label="카테고리"
+          <CategorySelect
+            categories={categories}
             value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            hint={
-              categories.length === 0
-                ? '아직 카테고리가 없습니다. 설정에서 먼저 만들 수 있습니다.'
-                : undefined
-            }
-          >
-            <option value="">선택 안 함</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
+            onChange={setCategoryId}
+          />
+          {/* select 가 아니라 datalist 다 — 유통방식은 정해진 목록이 아니라
+              본사 사정으로 언제든 새 값이 생기는 말이라, 제안은 하되 자유
+              입력을 막으면 안 된다. */}
+          <Input
+            label="유통방식"
+            value={channel}
+            onChange={(e) => setChannel(e.target.value)}
+            placeholder="예: CJFW, 택배, 쿠팡"
+            maxLength={30}
+            list="channel-options"
+            hint="어디서 들어오는 상품인지. 새 값을 적으면 그대로 만들어집니다."
+          />
+          <datalist id="channel-options">
+            {channels.map((c) => (
+              <option key={c} value={c} />
             ))}
-          </Select>
+          </datalist>
           <Input
             label="설명"
             value={description}
@@ -352,6 +366,7 @@ export function ProductForm({
             <span>판매가</span>
             <span>원가</span>
             <span>기초수량</span>
+            <span>입수</span>
             <span>최소재고</span>
             <span>바코드</span>
           </div>
@@ -392,6 +407,14 @@ export function ProductForm({
                     placeholder="0"
                     value={d.qty}
                     onChange={(e) => setDraft(key, { qty: e.target.value })}
+                  />
+                </Cell>
+                <Cell label="입수">
+                  <NumberInput
+                    aria-label={`${label} 입수`}
+                    placeholder="선택"
+                    value={d.pack}
+                    onChange={(e) => setDraft(key, { pack: e.target.value })}
                   />
                 </Cell>
                 <Cell label="최소재고">

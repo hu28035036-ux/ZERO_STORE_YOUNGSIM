@@ -5,12 +5,13 @@ import { useActionState, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input, NumberInput, Select } from '@/components/ui/field'
+import { Input, NumberInput } from '@/components/ui/field'
 import { formatQty, formatWon } from '@/lib/constants'
 import type { ActionState } from '@/lib/action-state'
 
 import { updateProduct } from '../../actions'
 import { type CategoryOption } from '../../categories'
+import { CategorySelect } from '../../category-select'
 import { Cell, toInt } from '../../variant-fields'
 
 export type EditVariant = {
@@ -18,26 +19,32 @@ export type EditVariant = {
   label: string
   salePrice: string
   lowStockThreshold: string
+  unitsPerPack: string
   barcode: string
   stockQty: number
   costPrice: number
 }
 
-const GRID = 'sm:grid-cols-[1.6fr_1fr_1fr_1.4fr]'
+const GRID = 'sm:grid-cols-[1.6fr_1fr_0.8fr_0.8fr_1.4fr]'
 
 export function EditProductForm({
   productId,
   initialName,
   initialCategoryId,
+  initialChannel,
   initialDescription,
   categories,
+  channels,
   initialVariants,
 }: {
   productId: string
   initialName: string
   initialCategoryId: string
+  initialChannel: string
   initialDescription: string
   categories: CategoryOption[]
+  /** 기존 상품들이 쓰는 유통방식 값 — datalist 로 제안만 하고 새 값도 받는다 */
+  channels: string[]
   initialVariants: EditVariant[]
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
@@ -47,6 +54,7 @@ export function EditProductForm({
 
   const [name, setName] = useState(initialName)
   const [categoryId, setCategoryId] = useState(initialCategoryId)
+  const [channel, setChannel] = useState(initialChannel)
   const [description, setDescription] = useState(initialDescription)
   const [variants, setVariants] = useState<EditVariant[]>(initialVariants)
 
@@ -64,15 +72,17 @@ export function EditProductForm({
         productId,
         name,
         categoryId: categoryId || null,
+        channel: channel.trim() || null,
         description: description.trim() || null,
         variants: variants.map((v) => ({
           variantId: v.variantId,
           salePrice: toInt(v.salePrice),
           lowStockThreshold: toInt(v.lowStockThreshold),
+          unitsPerPack: toInt(v.unitsPerPack),
           barcode: v.barcode.trim() || null,
         })),
       }),
-    [productId, name, categoryId, description, variants],
+    [productId, name, categoryId, channel, description, variants],
   )
 
   return (
@@ -91,18 +101,27 @@ export function EditProductForm({
             required
             maxLength={120}
           />
-          <Select
-            label="카테고리"
+          <CategorySelect
+            categories={categories}
             value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-          >
-            <option value="">선택 안 함</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
+            onChange={setCategoryId}
+          />
+          {/* select 가 아니라 datalist 다 — 유통방식은 정해진 목록이 아니라
+              본사 사정으로 언제든 새 값이 생기는 말이라, 제안은 하되 자유
+              입력을 막으면 안 된다. */}
+          <Input
+            label="유통방식"
+            value={channel}
+            onChange={(e) => setChannel(e.target.value)}
+            placeholder="예: CJFW, 택배, 쿠팡"
+            maxLength={30}
+            list="channel-options"
+          />
+          <datalist id="channel-options">
+            {channels.map((c) => (
+              <option key={c} value={c} />
             ))}
-          </Select>
+          </datalist>
           <Input
             label="설명"
             value={description}
@@ -125,6 +144,7 @@ export function EditProductForm({
             <span>옵션</span>
             <span>판매가</span>
             <span>최소재고</span>
+            <span>입수</span>
             <span>바코드</span>
           </div>
 
@@ -159,6 +179,16 @@ export function EditProductForm({
                   value={v.lowStockThreshold}
                   onChange={(e) =>
                     setVariant(v.variantId, { lowStockThreshold: e.target.value })
+                  }
+                />
+              </Cell>
+              <Cell label="입수">
+                <NumberInput
+                  aria-label={`${v.label} 입수`}
+                  placeholder="선택"
+                  value={v.unitsPerPack}
+                  onChange={(e) =>
+                    setVariant(v.variantId, { unitsPerPack: e.target.value })
                   }
                 />
               </Cell>

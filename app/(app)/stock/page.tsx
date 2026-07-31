@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { FileUp, Plus } from 'lucide-react'
 
 import { Card, StatTile } from '@/components/ui/card'
 import { formatQty, formatWon } from '@/lib/constants'
@@ -68,13 +68,22 @@ export default async function StockPage({
         <h1 className="text-ink text-lg font-semibold tracking-tight">재고</h1>
         {/* Button 이 아니라 Link 다. 새 화면으로 가는 동작은 링크여야
             길게 눌러 새 탭으로 열거나 뒤로 가기가 정상 동작한다. */}
-        <Link
-          href="/stock/new"
-          className="bg-primary text-primary-ink hover:bg-primary-hover h-touch inline-flex items-center justify-center gap-2 rounded-lg px-4 text-[0.9375rem] font-medium transition-colors select-none"
-        >
-          <Plus size={18} aria-hidden />
-          상품 등록
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/stock/import"
+            className="border-border-strong text-ink hover:bg-surface-sunken h-touch inline-flex items-center justify-center gap-2 rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors select-none"
+          >
+            <FileUp size={18} aria-hidden />
+            파일로 등록
+          </Link>
+          <Link
+            href="/stock/new"
+            className="bg-primary text-primary-ink hover:bg-primary-hover h-touch inline-flex items-center justify-center gap-2 rounded-lg px-4 text-[0.9375rem] font-medium transition-colors select-none"
+          >
+            <Plus size={18} aria-hidden />
+            상품 등록
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

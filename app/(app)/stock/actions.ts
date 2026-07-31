@@ -19,6 +19,8 @@ const variantSchema = z.object({
   sale_price: z.number().int().min(0).max(1_000_000_000),
   initial_unit_cost: z.number().int().min(0).max(1_000_000_000),
   initial_qty: z.number().int().min(0).max(1_000_000),
+  // 0 은 "미입력"이다. DB 는 units_per_pack > 0 만 받으므로 보낼 때 null 로 바꾼다.
+  units_per_pack: z.number().int().min(0).max(100_000),
   low_stock_threshold: z.number().int().min(0).max(1_000_000),
   // 4자 하한은 DB 의 check 제약과 같은 값이다. 여기서 먼저 걸러야
   // 사용자가 제약 위반 원문을 보는 일이 없다.
@@ -33,6 +35,7 @@ const variantSchema = z.object({
 const payloadSchema = z.object({
   name: z.string().trim().min(1, { error: '상품명을 입력하세요' }).max(120),
   categoryId: z.uuid().nullable(),
+  channel: z.string().trim().max(30).nullable(),
   description: z.string().trim().max(500).nullable(),
   // 축이 3개를 넘으면 조합이 폭발하고 휴대폰에서 표가 무너진다.
   optionSchema: z.array(axisSchema).max(3),
@@ -88,7 +91,7 @@ export async function createProduct(
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message }
   }
-  const { name, categoryId, description, optionSchema, variants } = parsed.data
+  const { name, categoryId, channel, description, optionSchema, variants } = parsed.data
 
   // 선언한 축과 변형의 옵션 키가 정확히 일치해야 한다.
   // DB 트리거는 "선언 안 된 키"만 막는다. 축이 빠진 변형은 통과하는데,
@@ -116,9 +119,13 @@ export async function createProduct(
   const { error } = await supabase.rpc('create_product', {
     p_name: name,
     p_category_id: categoryId ?? undefined,
+    p_channel: channel ?? undefined,
     p_description: description ?? undefined,
     p_option_schema: optionSchema,
-    p_variants: variants,
+    p_variants: variants.map((v) => ({
+      ...v,
+      units_per_pack: v.units_per_pack > 0 ? v.units_per_pack : null,
+    })),
   })
 
   if (error) return { error: humanize(error) }
@@ -131,6 +138,50 @@ export async function createProduct(
 }
 
 // ---------------------------------------------------------------------------
+// 분류 인라인 생성
+//
+// 설정 화면의 createCategory 는 폼 액션(ActionState)이라 만들어진 id 를
+// 돌려주지 못한다. 상품 등록 도중 "새 분류"를 만들면 그 자리에서 바로
+// 선택돼야 하므로 id 를 돌려주는 전용 액션을 둔다.
+// ---------------------------------------------------------------------------
+
+export async function createCategoryInline(
+  rawName: string,
+): Promise<{ id: string } | { error: string }> {
+  await requireUser()
+
+  const name = rawName.trim()
+  if (!name) return { error: '분류 이름을 입력하세요' }
+  if (name.length > 30) return { error: '이름이 너무 깁니다' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('categories')
+    .insert({ name, parent_id: null })
+    .select('id')
+    .single()
+
+  if (error) {
+    if (error.code === '23505') {
+      // 이미 있는 이름이면 만들 필요 없이 그 분류를 골라 준다.
+      const { data: existing } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('name', name)
+        .is('parent_id', null)
+        .maybeSingle()
+      if (existing) return { id: existing.id }
+      return { error: '같은 이름의 분류가 이미 있습니다 (소분류로)' }
+    }
+    return { error: error.message }
+  }
+
+  revalidatePath('/stock')
+  revalidatePath('/settings')
+  return { id: data.id }
+}
+
+// ---------------------------------------------------------------------------
 // 수정
 // ---------------------------------------------------------------------------
 
@@ -138,6 +189,8 @@ const editVariantSchema = z.object({
   variantId: z.uuid(),
   salePrice: z.number().int().min(0).max(1_000_000_000),
   lowStockThreshold: z.number().int().min(0).max(1_000_000),
+  // 0 은 "미입력"이다. DB 는 units_per_pack > 0 만 받으므로 보낼 때 null 로 바꾼다.
+  unitsPerPack: z.number().int().min(0).max(100_000),
   // 4자 하한은 DB 의 check 제약과 같은 값이다. 여기서 먼저 걸러야 사용자가
   // 제약 위반 원문을 보는 일이 없다.
   barcode: z
@@ -152,6 +205,7 @@ const editPayloadSchema = z.object({
   productId: z.uuid(),
   name: z.string().trim().min(1, { error: '상품명을 입력하세요' }).max(120),
   categoryId: z.uuid().nullable(),
+  channel: z.string().trim().max(30).nullable(),
   description: z.string().trim().max(500).nullable(),
   variants: z.array(editVariantSchema).max(200),
 })
@@ -175,7 +229,7 @@ export async function updateProduct(
   const parsed = editPayloadSchema.safeParse(json)
   if (!parsed.success) return fail(parsed.error.issues[0].message)
 
-  const { productId, name, categoryId, description, variants } = parsed.data
+  const { productId, name, categoryId, channel, description, variants } = parsed.data
 
   // 폼 안에서 바코드가 겹치는 경우. DB 도 막지만 어느 값인지 알려주려면
   // 여기서 먼저 봐야 한다.
@@ -188,12 +242,14 @@ export async function updateProduct(
     p_product_id: productId,
     p_name: name,
     p_category_id: categoryId ?? undefined,
+    p_channel: channel ?? undefined,
     p_description: description ?? undefined,
     p_variants: variants.map((v) => ({
       variant_id: v.variantId,
       sale_price: v.salePrice,
       low_stock_threshold: v.lowStockThreshold,
       barcode: v.barcode,
+      units_per_pack: v.unitsPerPack > 0 ? v.unitsPerPack : null,
     })),
   })
 
