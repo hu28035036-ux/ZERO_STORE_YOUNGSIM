@@ -663,8 +663,24 @@ export default async function EditProductPage({
     supabase.from('categories').select('id, name, parent_id'),
   ])
 
+  // 쿼리가 실패해도 data 는 null 이다. 그것을 그대로 notFound() 로 보내면 진짜
+  // 오류(네트워크 끊김·RLS 거부)가 "상품 없음" 404 로 둔갑해서, 원인을 찾는 사람이
+  // 엉뚱한 데를 뒤지게 된다. 이 저장소는 같은 실수를 로그인 문구에서 이미 한 번
+  // 했다 (73d896e). 오류와 없음을 가른다.
+  if (product.error || rows.error) {
+    return (
+      <Card className="p-5">
+        <p className="text-danger text-sm font-medium">상품을 불러오지 못했습니다.</p>
+        <p className="text-ink-muted mt-1.5 text-sm">
+          {(product.error ?? rows.error)!.message}
+        </p>
+      </Card>
+    )
+  }
   if (!product.data) notFound()
 
+  // 카테고리는 실패해도 화면을 막지 않는다. 선택지가 비는 것뿐이고 나머지 값은
+  // 그대로 고칠 수 있다.
   const options = toCategoryOptions(categories.data ?? [])
 
   const variants: EditVariant[] = (rows.data ?? []).map((v) => ({
