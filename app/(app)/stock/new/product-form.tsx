@@ -452,11 +452,16 @@ export function ProductForm({
 
       {/* scanningKey 가 null 이 아닌 동안만 뜬다. onDetect 는 렌더마다 새로 만들어지지만
           BarcodeScanner 내부에서 항상 최신 콜백을 ref 로 읽으므로 scanningKey 가 바뀐
-          뒤에도 그 줄을 놓치지 않는다. */}
+          뒤에도 그 줄을 놓치지 않는다.
+
+          truthiness(`if (scanningKey)`)가 아니라 반드시 `!== null` 로 봐야 한다 —
+          옵션이 없는 상품(이 화면의 기본값)은 comboKey 가 [].join() 으로 빈
+          문자열을 돌려주고, 그 빈 문자열도 유효한 키다. truthiness 검사면 ''
+          가 falsy 라 가장 흔한 경우(옵션 없음)에서 스캔값이 조용히 버려진다. */}
       <BarcodeScanner
         open={scanningKey !== null}
         onDetect={(code) => {
-          if (scanningKey) setDraft(scanningKey, { barcode: code })
+          if (scanningKey !== null) setDraft(scanningKey, { barcode: code })
         }}
         onClose={() => setScanningKey(null)}
       />

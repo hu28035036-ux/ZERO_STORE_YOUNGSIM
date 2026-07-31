@@ -34,12 +34,17 @@ type ScannerState =
   | { status: 'error'; message: string }
 
 /**
- * 카메라를 못 연 이유를 실패 유형별로 다른 문구로 보여준다.
+ * getUserMedia 가 못 연 이유를 실패 유형별로 다른 문구로 보여준다.
  *
  * 이 저장소는 로그인 실패 문구를 원인과 무관하게 "비밀번호가 틀렸습니다" 하나로
  * 뭉뚱그렸다가, 실제로는 인증 서버에 못 붙는 상황을 비밀번호 탓으로 돌려 한참
  * 헤맨 적이 있다(커밋 73d896e). 카메라도 같은 실수를 반복하지 않는다 — 권한
- * 거부/카메라 없음/그 밖을 구분해야 사람이 무엇을 해야 할지 알 수 있다.
+ * 거부/카메라 없음/다른 앱 점유/그 밖을 구분해야 사람이 무엇을 해야 할지 안다.
+ *
+ * **이 함수는 getUserMedia 실패에만 쓴다.** video.play() 실패나 해독기(wasm)
+ * 로딩 실패까지 여기로 흘려보내면, 권한도 카메라도 멀쩡한데 "카메라 사용을
+ * 허용해야…" 같은 엉뚱한 문구가 뜬다 — 아래 describePlayFailure /
+ * describeDetectorFailure 가 그 두 단계를 각자 맡는다.
  */
 function describeFailure(error: unknown): string {
   if (error instanceof DOMException && error.name === 'NotAllowedError') {
@@ -48,9 +53,45 @@ function describeFailure(error: unknown): string {
   if (error instanceof DOMException && error.name === 'NotFoundError') {
     return '이 기기에서 카메라를 찾지 못했습니다'
   }
+  if (error instanceof DOMException && error.name === 'NotReadableError') {
+    // 하드웨어 차원에서 다른 프로세스가 이미 카메라를 잡고 있을 때 난다.
+    // 권한은 있고 장치도 있는데 못 여는 것이라 앞의 두 문구와 원인이 다르다.
+    return '다른 앱이 카메라를 쓰고 있습니다. 그 앱을 닫고 다시 시도하세요'
+  }
   const detail = error instanceof Error ? error.message : String(error)
   return `카메라를 열지 못했습니다: ${detail}`
 }
+
+/**
+ * video.play() 실패 전용 문구.
+ *
+ * 아이폰 저전력 모드 등에서 play() 가 NotAllowedError 로 거부될 수 있는데,
+ * describeFailure 를 그대로 쓰면 "카메라 사용을 허용해야…브라우저 설정에서
+ * 켜 주세요" 가 뜬다 — 권한은 이미 있으므로 설정에 가 봐야 이미 켜져 있고
+ * 사람만 엉뚱한 곳에서 헤맨다(73d896e 와 같은 종류의 오귀인).
+ */
+function describePlayFailure(error: unknown): string {
+  const detail = error instanceof Error ? error.message : String(error)
+  return `카메라 화면을 켜지 못했습니다: ${detail}`
+}
+
+/** 해독기(네이티브 또는 wasm ponyfill) 준비 실패 전용 문구. 카메라 자체는 이미 열렸다. */
+function describeDetectorFailure(error: unknown): string {
+  const detail = error instanceof Error ? error.message : String(error)
+  return `바코드 해독기를 불러오지 못했습니다: ${detail}`
+}
+
+/**
+ * prepareZXingModule 에 넘길 override.
+ *
+ * 함수 안에서 매번 `{ locateFile: () => ... }` 를 새로 만들면 구조는 같아도
+ * 참조가 매번 다르다. zxing-wasm 은 이 override 를 참조 동일성으로 비교해
+ * 모듈을 캐시하므로, 매번 새 객체를 넘기면 스캐너를 열 때마다(첫 번째든
+ * 열 번째든) wasm 을 매번 재인스턴스화한다 — 아이폰에서는 스캐너를 다시 열
+ * 때마다 헛되이 1.1MB 를 다시 받는 셈이다. 모듈 최상위 상수로 한 번만 만들어
+ * 항상 같은 참조를 넘긴다.
+ */
+const ZXING_OVERRIDES = { locateFile: () => '/zxing_reader.wasm' }
 
 /**
  * 브라우저가 가진 바코드 해독기를 고른다.
@@ -87,7 +128,7 @@ async function createDetector(): Promise<DetectorLike> {
   // 실패가 setInterval 콜백 안에서야 조용히 던져져 "카메라를 열지 못했습니다"
   // 로 드러나지 않고 그냥 계속 아무것도 안 읽히는 것처럼 보인다.
   await prepareZXingModule({
-    overrides: { locateFile: () => '/zxing_reader.wasm' },
+    overrides: ZXING_OVERRIDES,
     fireImmediately: true,
   })
 
@@ -154,7 +195,16 @@ export function BarcodeScanner({
       let stream: MediaStream
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
+          video: {
+            facingMode: 'environment',
+            // 제약이 facingMode 뿐이면 기기가 640×480 처럼 낮은 해상도를 골라줄
+            // 수 있고, 그 해상도로는 작은 바코드가 안 읽힌다. ideal(요청일 뿐
+            // 강제가 아님)로 줘야 한다 — exact 로 두면 그 정확한 해상도를 못
+            // 내는 기기(구형 카메라 등)에서 getUserMedia 자체가 실패해 카메라가
+            // 아예 안 열린다.
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
         })
       } catch (err) {
         if (stopped) return
@@ -170,10 +220,16 @@ export function BarcodeScanner({
       }
       streamRef.current = stream
 
-      try {
-        const video = videoRef.current
-        if (!video) throw new Error('비디오 엘리먼트를 찾지 못했습니다')
+      const video = videoRef.current
+      if (!video) {
+        // 카메라·해독기 문제가 아니라 렌더링 순서 문제다(dialog 가 열려
+        // 있으면 이론상 항상 있어야 한다) — 그래도 뭔가는 보여줘야 한다.
+        teardown()
+        setState({ status: 'error', message: '비디오 화면을 준비하지 못했습니다' })
+        return
+      }
 
+      try {
         video.srcObject = stream
         // JSX 의 muted 속성만으로는 일부 브라우저에서 자동재생 시점까지 반영되지
         // 않는다 — React 가 muted 를 attribute 로만 설정하고 미디어 엘리먼트의
@@ -181,42 +237,57 @@ export function BarcodeScanner({
         // 확실히 무음으로 재생되게 한다.
         video.muted = true
         await video.play()
-
-        const detector = await createDetector()
-        if (stopped) return
-        setState({ status: 'scanning' })
-
-        async function tick() {
-          if (stopped || busy) return
-          const videoEl = videoRef.current
-          if (!videoEl || videoEl.readyState < videoEl.HAVE_CURRENT_DATA) return
-
-          busy = true
-          try {
-            const results = await detector.detect(videoEl)
-            if (stopped || results.length === 0) return
-            // 같은 바코드가 초당 여러 번 잡힌다. busy 로 한 번에 하나만 돌게
-            // 막고, 첫 인식에서 바로 interval 을 세우고 스트림을 꺼야
-            // onDetect 가 두 번 불리지 않는다.
-            const code = results[0].rawValue
-            teardown()
-            onDetectRef.current(code)
-            onCloseRef.current()
-          } catch {
-            // 프레임 하나 인식 실패는 무시한다 — 다음 tick 에서 다시 시도된다.
-          } finally {
-            busy = false
-          }
-        }
-
-        intervalId = setInterval(() => {
-          void tick()
-        }, SCAN_INTERVAL_MS)
       } catch (err) {
         if (stopped) return
         teardown()
-        setState({ status: 'error', message: describeFailure(err) })
+        setState({ status: 'error', message: describePlayFailure(err) })
+        return
       }
+
+      // play() 는 성공했지만 그 사이(await 하는 동안) 닫혔을 수 있다. 여기서
+      // 멈추지 않으면 아무도 안 보는 오버레이를 위해 해독기를 마저 불러온다 —
+      // 아이폰이면 헛되이 1.1MB wasm 을 받는다.
+      if (stopped) return
+
+      let detector: DetectorLike
+      try {
+        detector = await createDetector()
+      } catch (err) {
+        if (stopped) return
+        teardown()
+        setState({ status: 'error', message: describeDetectorFailure(err) })
+        return
+      }
+
+      if (stopped) return
+      setState({ status: 'scanning' })
+
+      async function tick() {
+        if (stopped || busy) return
+        const videoEl = videoRef.current
+        if (!videoEl || videoEl.readyState < videoEl.HAVE_CURRENT_DATA) return
+
+        busy = true
+        try {
+          const results = await detector.detect(videoEl)
+          if (stopped || results.length === 0) return
+          // 같은 바코드가 초당 여러 번 잡힌다. busy 로 한 번에 하나만 돌게
+          // 막고, 첫 인식에서 바로 interval 을 세우고 스트림을 꺼야
+          // onDetect 가 두 번 불리지 않는다.
+          const code = results[0].rawValue
+          teardown()
+          onDetectRef.current(code)
+          onCloseRef.current()
+        } catch {
+          // 프레임 하나 인식 실패는 무시한다 — 다음 tick 에서 다시 시도된다.
+        } finally {
+          busy = false
+        }
+      }
+
+      intervalId = setInterval(() => {
+        void tick()
+      }, SCAN_INTERVAL_MS)
     }
 
     start()
