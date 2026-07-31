@@ -33,6 +33,7 @@ Next.js 16 (App Router, Turbopack) + Supabase. 모바일과 데스크톱이 반�
 | `/` | 오늘 매출·마진, 재고 자산, 부족 목록, 캐시 불일치 경고 |
 | `/stock` | `v_variant_stock` 목록. 검색·필터·정렬(데스크톱은 표) |
 | `/stock/new` | 옵션 축 → 데카르트 곱으로 변형 생성 → `create_product` 한 번 |
+| `/stock/[productId]/edit` | 상품 기본정보 + 변형별 판매가·최소재고·바코드 수정 → `update_product` 한 번. 재고·원가는 읽기 전용, 입출고 화면으로 링크만 건다 |
 | `/movements` | `v_movements` 내역. 종류·기간 필터, 페이지 넘김, 정정 |
 | `/movements/new` | 상품 찾기 → 종류 고르기 → 등록. "12개 → 32개" 미리보기 |
 | `/sell` | 바코드 스캔 → 장바구니 → `record_sale` |
@@ -65,6 +66,8 @@ Next.js 16 (App Router, Turbopack) + Supabase. 모바일과 데스크톱이 반�
 | `lib/action-state.ts` | 서버 액션 결과 타입 + `ok()` / `fail()` |
 | `components/ui/action-form.tsx` | 서버 액션 하나를 감싸는 폼. 저장 중·오류·성공 문구를 한 곳에서 처리한다. 두 번 눌러야 실행되는 `confirmLabel` 도 여기 있다 |
 | `lib/constants.ts` | 한국어 라벨 매핑, `formatWon`/`formatQty`/`formatDateTime`, `todayInSeoul` |
+| `app/(app)/stock/categories.ts` | 카테고리 2단 계층을 "대분류 > 소분류" 한 줄로 펴는 `toCategoryOptions()`. 상품 등록·수정 화면이 함께 쓴다 |
+| `app/(app)/stock/variant-fields.tsx` | 변형 표의 좁은 화면 라벨(`Cell`)과 입력값 숫자 파싱(`toInt`). 상품 등록·수정 화면이 함께 쓴다 |
 
 ### 화면을 그릴 때의 규칙
 
@@ -315,6 +318,12 @@ update supabase_migrations.schema_migrations m
 **앞으로 MCP `apply_migration` 을 쓰면 또 어긋난다.** 새 마이그레이션을 넣은 뒤에는
 version 이 파일명과 같은지 확인해라.
 
+**그 뒤 0014 가 늘었다 (2026-07-31, 상품 수정 RPC).**
+`20260731000001_update_product_rpc.sql`. 원격 `schema_migrations` 에서 확인한
+실제 version 도 `20260731000001` 로 파일명과 같다 — 이번엔 위에서 겪은 어긋남이
+재발하지 않았다. 마이그레이션은 이제 14개다. 새 마이그레이션을 넣을 때마다 이
+확인은 계속해라.
+
 ---
 
 ## 열린 항목
@@ -369,8 +378,10 @@ version 이 파일명과 같은지 확인해라.
   폼에서도 날짜 칸을 빼고 이유를 적어뒀다. 필요하면 RPC 부터 고쳐야 한다.
 - **판매 전표 정정.** 영수증 단위로 되돌려야 해서 판매 화면 몫으로 남겼다.
   지금은 입출고 화면에서 판매 전표의 정정 버튼이 안 나온다.
-- **상품 수정 화면.** 등록만 있고 수정이 없다. 가격·최소재고를 고치려면 지금은
-  DB 를 직접 만져야 한다. 다음에 만들 만한 것 중 가장 아쉬운 구멍이다.
+- **상품 수정 화면의 남은 구멍.** 기본정보와 변형별 판매가·최소재고·대표 바코드는
+  `/stock/[productId]/edit` 에서 고칠 수 있다(2026-07-31). 옵션 축을 바꾸는 것,
+  변형을 추가·삭제하는 것, 상품·변형을 숨기는 것, 상품을 삭제하는 것, 이미지
+  등록은 여전히 이 화면의 몫이 아니다. 필요하면 지금도 DB 를 직접 만져야 한다.
 
 ---
 
