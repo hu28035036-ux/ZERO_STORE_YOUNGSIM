@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Search } from 'lucide-react'
 
+import { ScanButton } from '@/components/scanner/scan-button'
 import { cn } from '@/lib/cn'
 
 import { FILTER_LABEL, FILTERS, stockHref, type StockQuery } from './query'
@@ -25,7 +26,9 @@ export function StockToolbar({ query }: { query: StockQuery }) {
         ) : null}
         {query.desc ? <input type="hidden" name="dir" value="desc" /> : null}
 
-        <div className="relative flex-1">
+        {/* min-w-0: 카메라 버튼이 늘면서 좁은 화면에서 입력칸이 카드 밖으로
+            밀리지 않게 한다 — 판매 화면 금액 잘림(ac46d4b)과 같은 사고 예방. */}
+        <div className="relative min-w-0 flex-1">
           <Search
             size={18}
             aria-hidden
@@ -42,9 +45,12 @@ export function StockToolbar({ query }: { query: StockQuery }) {
             className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-touch w-full rounded-lg border pr-3 pl-10 text-base outline-none"
           />
         </div>
+        {/* "이거 몇 개 남았지?" 를 물건을 들고 바로 확인하는 경로. 스캔값은
+            이 GET 폼의 q 로 제출되어 보던 필터·정렬이 그대로 유지된다. */}
+        <ScanButton inputName="q" />
         <button
           type="submit"
-          className="bg-surface text-ink border-border-strong hover:bg-surface-sunken h-touch inline-flex items-center rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors"
+          className="bg-surface text-ink border-border-strong hover:bg-surface-sunken h-touch inline-flex shrink-0 items-center rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors"
         >
           검색
         </button>
