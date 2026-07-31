@@ -20,6 +20,34 @@ pnpm dev
 secret 키는 이 앱에 두지 않는다. 모든 쓰기가 로그인 사용자 권한으로 RLS 를 통과해야
 `created_by` 감사 기록이 성립하기 때문이다.
 
+**`pnpm dev`/`pnpm build` 를 그대로 써야 한다.** 두 스크립트 다
+`node scripts/copy-zxing-wasm.mjs && next dev`(또는 `next build`)로 묶여 있어서,
+카메라 바코드 스캔(아래 "카메라 바코드 스캔" 절)이 쓰는 wasm 을 먼저
+`public/` 으로 복사한다. `./node_modules/.bin/next dev` 처럼 `next` 를 직접
+부르면 이 복사를 건너뛴다 — 안드로이드는 내장 해독기를 쓰므로 멀쩡해 보이지만,
+**아이폰 경로만 조용히 깨진다.**
+
+## 카메라 바코드 스캔
+
+`/stock/new`(변형별 바코드 칸)와 `/movements/new`(찾기 칸)는 휴대폰 카메라로
+바코드를 찍어 입력칸을 채울 수 있다. 공용 컴포넌트는
+`components/scanner/barcode-scanner.tsx` 이고, 아직 `/sell` 에는 붙이지
+않았다 — 같은 컴포넌트를 그대로 가져다 붙일 수 있다.
+
+해독기는 기기에 따라 다른 경로를 탄다. 안드로이드 크롬은 브라우저 내장
+`BarcodeDetector` 를 그대로 쓴다. 아이폰 사파리는 그게 없어서(2026-07 기준,
+애플이 넣을 조짐도 없다) `barcode-detector` 의 ponyfill(ZXing WebAssembly)을
+스캐너를 여는 순간에만 동적으로 불러온다 — 정적 import 로 두면 안드로이드
+기기까지 1.1MB wasm 을 받는다.
+
+wasm 파일은 `barcode-detector` 기본값인 jsDelivr CDN 이 아니라 이 앱이 직접
+서빙한다. `scripts/copy-zxing-wasm.mjs` 가 `node_modules` 의
+`zxing_reader.wasm` 을 `public/zxing_reader.wasm` 으로 복사하고, 복사본은
+`.gitignore` 에 있어 커밋하지 않는다(zxing-wasm 버전이 오를 때 복사본만
+옛것으로 남는 어긋남을 막기 위해서다). CDN 을 그대로 썼다면 CDN 이 막히거나
+죽을 때 아이폰에서만, 그것도 조용히 스캔이 실패한다 — 안드로이드는 내장
+기능을 쓰므로 원인을 찾기가 특히 어렵다.
+
 ## 계정 만들기
 
 가입 화면은 없다. 같이 쓰는 사람만 들어오는 앱이라 계정은 Supabase 대시보드에서
