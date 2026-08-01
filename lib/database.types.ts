@@ -144,11 +144,13 @@ export type Database = {
       products: {
         Row: {
           category_id: string | null
+          channel: string | null
           created_at: string
           created_by: string | null
           description: string | null
           id: string
           image_url: string | null
+          import_batch_id: string | null
           is_active: boolean
           name: string
           option_schema: Json
@@ -156,11 +158,13 @@ export type Database = {
         }
         Insert: {
           category_id?: string | null
+          channel?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          import_batch_id?: string | null
           is_active?: boolean
           name: string
           option_schema?: Json
@@ -168,11 +172,13 @@ export type Database = {
         }
         Update: {
           category_id?: string | null
+          channel?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
+          import_batch_id?: string | null
           is_active?: boolean
           name?: string
           option_schema?: Json
@@ -424,6 +430,7 @@ export type Database = {
           sale_price: number
           sku: string | null
           stock_qty: number
+          units_per_pack: number | null
           updated_at: string
         }
         Insert: {
@@ -437,6 +444,7 @@ export type Database = {
           sale_price?: number
           sku?: string | null
           stock_qty?: number
+          units_per_pack?: number | null
           updated_at?: string
         }
         Update: {
@@ -450,6 +458,7 @@ export type Database = {
           sale_price?: number
           sku?: string | null
           stock_qty?: number
+          units_per_pack?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -632,6 +641,7 @@ export type Database = {
           barcode: string | null
           category_id: string | null
           category_name: string | null
+          channel: string | null
           cost_price: number | null
           is_active: boolean | null
           is_low_stock: boolean | null
@@ -648,6 +658,7 @@ export type Database = {
           stock_qty: number | null
           stock_value: number | null
           unit_margin: number | null
+          units_per_pack: number | null
           updated_at: string | null
           variant_id: string | null
         }
@@ -658,6 +669,7 @@ export type Database = {
       create_product: {
         Args: {
           p_category_id?: string
+          p_channel?: string
           p_description?: string
           p_name: string
           p_option_schema?: Json
@@ -668,6 +680,14 @@ export type Database = {
       fn_option_label: {
         Args: { p_options: Json; p_schema: Json }
         Returns: string
+      }
+      import_products: {
+        Args: { p_products: Json }
+        Returns: {
+          batch_id: string
+          product_id: string
+          product_name: string
+        }[]
       }
       import_sales: {
         Args: { p_force?: boolean; p_groups: Json; p_memo?: string }
@@ -775,12 +795,17 @@ export type Database = {
       update_product: {
         Args: {
           p_category_id?: string
+          p_channel?: string
           p_description?: string
           p_name: string
           p_product_id: string
           p_variants?: Json
         }
         Returns: undefined
+      }
+      void_product_import: {
+        Args: { p_batch_id: string; p_reason?: string }
+        Returns: number
       }
       void_import_batch: {
         Args: { p_batch_id: string; p_reason?: string }

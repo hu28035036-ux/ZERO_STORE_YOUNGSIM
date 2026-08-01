@@ -65,6 +65,9 @@ export function StockTable({
               카테고리
             </th>
             <th scope="col" className="px-3 py-2 text-left font-medium">
+              유통
+            </th>
+            <th scope="col" className="px-3 py-2 text-left font-medium">
               바코드
             </th>
             <SortHead keyName="qty" query={query} align="right" />
@@ -92,6 +95,7 @@ export function StockTable({
               </td>
               <td className="text-ink-muted px-3 py-2.5">{row.option_label ?? '—'}</td>
               <td className="text-ink-muted px-3 py-2.5">{row.category_name ?? '—'}</td>
+              <td className="text-ink-muted px-3 py-2.5">{row.channel ?? '—'}</td>
               <td className="text-ink-subtle px-3 py-2.5 text-xs" data-numeric>
                 {row.barcode ?? '—'}
               </td>

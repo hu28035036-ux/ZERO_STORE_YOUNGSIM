@@ -19,20 +19,22 @@ export default async function EditProductPage({
   const { productId } = await params
   const supabase = await createClient()
 
-  const [product, rows, categories] = await Promise.all([
+  const [product, rows, categories, channelRows] = await Promise.all([
     supabase
       .from('products')
-      .select('id, name, category_id, description')
+      .select('id, name, category_id, channel, description')
       .eq('id', productId)
       .maybeSingle(),
     // 변형 값과 재고·원가를 한 번에 받으려고 뷰를 쓴다. 옵션 라벨도 뷰가 만든다.
     supabase
       .from('v_variant_stock')
       .select(
-        'variant_id, option_label, sale_price, low_stock_threshold, barcode, stock_qty, cost_price',
+        'variant_id, option_label, sale_price, low_stock_threshold, barcode, stock_qty, cost_price, units_per_pack',
       )
       .eq('product_id', productId),
     supabase.from('categories').select('id, name, parent_id'),
+    // PostgREST 에는 distinct 가 없다. 상품 수백 개 규모라 다 받아 여기서 거른다.
+    supabase.from('products').select('channel').not('channel', 'is', null),
   ])
 
   const header = (
@@ -79,10 +81,15 @@ export default async function EditProductPage({
     label: v.option_label ?? '옵션 없음',
     salePrice: String(v.sale_price ?? 0),
     lowStockThreshold: String(v.low_stock_threshold ?? 0),
+    unitsPerPack: v.units_per_pack != null ? String(v.units_per_pack) : '',
     barcode: v.barcode ?? '',
     stockQty: v.stock_qty ?? 0,
     costPrice: Number(v.cost_price ?? 0),
   }))
+
+  const channels = [
+    ...new Set((channelRows.data ?? []).map((r) => r.channel).filter((v): v is string => !!v)),
+  ].sort((a, b) => a.localeCompare(b, 'ko'))
 
   return (
     <div className="flex flex-col gap-4">
@@ -92,8 +99,10 @@ export default async function EditProductPage({
         productId={product.data.id}
         initialName={product.data.name}
         initialCategoryId={product.data.category_id ?? ''}
+        initialChannel={product.data.channel ?? ''}
         initialDescription={product.data.description ?? ''}
         categories={options}
+        channels={channels}
         initialVariants={variants}
       />
     </div>
