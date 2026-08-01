@@ -63,24 +63,27 @@ export function MovementForm({
   const [qty, setQty] = useState('')
   const [direction, setDirection] = useState<'in' | 'out'>('out')
   const [unitCost, setUnitCost] = useState('')
-  // 입고 전용 박스 모드. 매입 단위(입수 ≥2)가 있는 상품에만 열린다.
+  // 입고·출고의 박스 모드. 입수(≥2)가 없는 상품은 여기서 입수를 쳐 넣으면
+  // 서버가 상품에 저장해서 다음부터는 묻지 않는다.
   const [entryMode, setEntryMode] = useState<'each' | 'bundle'>('each')
   const [bundleCount, setBundleCount] = useState('')
   const [bundlePrice, setBundlePrice] = useState('')
+  const [bundleUnits, setBundleUnits] = useState('')
 
   const today = todayInSeoul()
 
-  const perPack = target.unitsPerPack ?? 0
   const packName = target.purchaseUnitName || '박스'
   const unitLabel = target.unit || '개'
   // 시트가 입수=1 을 "낱개 발주"라는 뜻으로 쓰던 값이라 1 은 박스가 아니다.
-  const canBundle = type === 'purchase' && perPack >= 2
+  const hasPack = (target.unitsPerPack ?? 0) >= 2
+  const perPack = hasPack ? target.unitsPerPack! : toInt(bundleUnits)
+  const canBundle = type === 'purchase' || type === 'outbound'
   const bundleMode = canBundle && entryMode === 'bundle'
 
   // 환산은 서버가 다시 한다 — 여기 숫자는 미리보기일 뿐이다.
   const n = bundleMode ? toInt(bundleCount) * perPack : toInt(qty)
   const eachCost =
-    bundleMode && toInt(bundlePrice) > 0
+    bundleMode && perPack >= 2 && toInt(bundlePrice) > 0
       ? Math.round((toInt(bundlePrice) / perPack) * 100) / 100
       : null
 
@@ -199,13 +202,19 @@ export function MovementForm({
           ) : null}
 
           {canBundle ? (
-            // 조정의 방향 라디오와 같은 패턴. 매입 단위가 없는 상품은 이
-            // 토글 자체가 없어서 지금까지와 완전히 같다.
-            <div role="radiogroup" aria-label="입고 입력 방식" className="grid grid-cols-2 gap-2">
+            // 조정의 방향 라디오와 같은 패턴. 입수가 아직 없는 상품도 토글은
+            // 보인다 — 숨기면 "박스로 적는 기능이 없다"로 읽힌다. 고르면
+            // 입수 칸이 나타나고, 그 값은 상품에 저장된다.
+            <div role="radiogroup" aria-label="입력 방식" className="grid grid-cols-2 gap-2">
               {(
                 [
                   ['each', `낱개로 (${unitLabel})`],
-                  ['bundle', `${packName}로 (1${packName} = ${perPack}${unitLabel})`],
+                  [
+                    'bundle',
+                    hasPack
+                      ? `${packName}로 (1${packName} = ${perPack}${unitLabel})`
+                      : `${packName}로`,
+                  ],
                 ] as const
               ).map(([value, text]) => {
                 const on = entryMode === value
@@ -232,31 +241,44 @@ export function MovementForm({
 
           {bundleMode ? (
             <>
+              {hasPack ? null : (
+                <NumberInput
+                  label={`1${packName}당 낱개 수 (입수)`}
+                  name="bundleUnits"
+                  value={bundleUnits}
+                  onChange={(e) => setBundleUnits(e.target.value)}
+                  placeholder="예: 30"
+                  required
+                  hint="이 상품에 저장돼서 다음부터는 묻지 않습니다. 2 이상이어야 합니다."
+                />
+              )}
               <NumberInput
-                label={`${packName} 수`}
+                label={type === 'outbound' ? `출고 ${packName} 수` : `${packName} 수`}
                 name="bundleCount"
                 value={bundleCount}
                 onChange={(e) => setBundleCount(e.target.value)}
                 placeholder="0"
                 required
                 hint={
-                  toInt(bundleCount) > 0
+                  toInt(bundleCount) > 0 && perPack >= 2
                     ? `${formatQty(toInt(bundleCount))}${packName} = ${formatQty(n)}${unitLabel}`
                     : undefined
                 }
               />
-              <NumberInput
-                label={`${packName}당 매입가`}
-                name="bundlePrice"
-                value={bundlePrice}
-                onChange={(e) => setBundlePrice(e.target.value)}
-                placeholder="0"
-                hint={
-                  eachCost != null
-                    ? `낱개 ${eachCost.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}원으로 저장됩니다`
-                    : '비워두면 지금 원가를 그대로 씁니다.'
-                }
-              />
+              {type === 'purchase' ? (
+                <NumberInput
+                  label={`${packName}당 매입가`}
+                  name="bundlePrice"
+                  value={bundlePrice}
+                  onChange={(e) => setBundlePrice(e.target.value)}
+                  placeholder="0"
+                  hint={
+                    eachCost != null
+                      ? `낱개 ${eachCost.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}원으로 저장됩니다`
+                      : '비워두면 지금 원가를 그대로 씁니다.'
+                  }
+                />
+              ) : null}
             </>
           ) : (
             <NumberInput
@@ -324,7 +346,7 @@ export function MovementForm({
       <Card className="flex items-baseline justify-between gap-3 px-4 py-3">
         <span className="text-ink-muted text-sm">
           등록하면
-          {bundleMode && toInt(bundleCount) > 0 ? (
+          {bundleMode && toInt(bundleCount) > 0 && perPack >= 2 ? (
             <span className="text-ink-subtle" data-numeric>
               {' '}
               ({formatQty(toInt(bundleCount))}
