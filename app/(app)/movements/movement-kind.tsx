@@ -1,5 +1,5 @@
 import { Badge, MovementBadge } from '@/components/ui/badge'
-import { formatQty } from '@/lib/constants'
+import { formatQty, withRo } from '@/lib/constants'
 
 import type { MovementRow } from './query'
 
@@ -30,8 +30,7 @@ export function QtyDelta({ row }: { row: MovementRow }) {
   if (row.type === 'stocktake') {
     return (
       <span className="text-ink text-sm" data-numeric>
-        {formatQty(row.counted_qty)}
-        {row.unit || '개'}로 맞춤{' '}
+        {withRo(`${formatQty(row.counted_qty)}${row.unit || '개'}`)} 맞춤{' '}
         <span className={tone}>
           ({sign}
           {formatQty(delta)})

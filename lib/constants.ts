@@ -50,6 +50,19 @@ export function formatQtyUnit(
 }
 
 /**
+ * '로/으로' 조사. 단위가 자유 입력이라 "병로 맞춤" 같은 문장이 나오지 않게
+ * 받침을 보고 고른다 (ㄹ 받침은 '로'). 한글이 아니면 '로'.
+ */
+export function withRo(word: string): string {
+  const ch = word.charCodeAt(word.length - 1)
+  if (ch >= 0xac00 && ch <= 0xd7a3) {
+    const jong = (ch - 0xac00) % 28
+    return jong === 0 || jong === 8 ? `${word}로` : `${word}으로`
+  }
+  return `${word}로`
+}
+
+/**
  * 집계 기준 시각대. DB 쪽 뷰·함수가 전부 KST 로 날짜를 자르므로
  * 화면에서 날짜를 만들 때도 같은 기준을 써야 하루씩 어긋나지 않는다.
  */
