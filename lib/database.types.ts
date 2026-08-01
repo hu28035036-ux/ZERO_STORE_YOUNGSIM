@@ -154,6 +154,8 @@ export type Database = {
           is_active: boolean
           name: string
           option_schema: Json
+          purchase_unit_name: string | null
+          unit: string
           updated_at: string
         }
         Insert: {
@@ -168,6 +170,8 @@ export type Database = {
           is_active?: boolean
           name: string
           option_schema?: Json
+          purchase_unit_name?: string | null
+          unit?: string
           updated_at?: string
         }
         Update: {
@@ -182,6 +186,8 @@ export type Database = {
           is_active?: boolean
           name?: string
           option_schema?: Json
+          purchase_unit_name?: string | null
+          unit?: string
           updated_at?: string
         }
         Relationships: [
@@ -510,6 +516,7 @@ export type Database = {
           barcode: string | null
           category_id: string | null
           category_name: string | null
+          channel: string | null
           cost_price: number | null
           is_active: boolean | null
           is_low_stock: boolean | null
@@ -521,11 +528,14 @@ export type Database = {
           product_active: boolean | null
           product_id: string | null
           product_name: string | null
+          purchase_unit_name: string | null
           sale_price: number | null
           sku: string | null
           stock_qty: number | null
           stock_value: number | null
+          unit: string | null
           unit_margin: number | null
+          units_per_pack: number | null
           updated_at: string | null
           variant_id: string | null
         }
@@ -553,6 +563,7 @@ export type Database = {
           supplier_id: string | null
           supplier_name: string | null
           type: Database["public"]["Enums"]["stock_movement_type"] | null
+          unit: string | null
           unit_cost: number | null
           unit_price: number | null
           variant_id: string | null
@@ -653,10 +664,12 @@ export type Database = {
           product_active: boolean | null
           product_id: string | null
           product_name: string | null
+          purchase_unit_name: string | null
           sale_price: number | null
           sku: string | null
           stock_qty: number | null
           stock_value: number | null
+          unit: string | null
           unit_margin: number | null
           units_per_pack: number | null
           updated_at: string | null
@@ -673,6 +686,8 @@ export type Database = {
           p_description?: string
           p_name: string
           p_option_schema?: Json
+          p_purchase_unit_name?: string
+          p_unit?: string
           p_variants?: Json
         }
         Returns: string
@@ -709,6 +724,7 @@ export type Database = {
           product_name: string
           sale_price: number
           stock_qty: number
+          unit: string
           variant_id: string
         }[]
       }
@@ -799,13 +815,11 @@ export type Database = {
           p_description?: string
           p_name: string
           p_product_id: string
+          p_purchase_unit_name?: string
+          p_unit?: string
           p_variants?: Json
         }
         Returns: undefined
-      }
-      void_product_import: {
-        Args: { p_batch_id: string; p_reason?: string }
-        Returns: number
       }
       void_import_batch: {
         Args: { p_batch_id: string; p_reason?: string }
@@ -813,6 +827,10 @@ export type Database = {
       }
       void_movement: {
         Args: { p_id: number; p_reason?: string }
+        Returns: number
+      }
+      void_product_import: {
+        Args: { p_batch_id: string; p_reason?: string }
         Returns: number
       }
       void_sale_order: {

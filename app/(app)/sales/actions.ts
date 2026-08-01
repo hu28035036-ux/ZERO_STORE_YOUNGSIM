@@ -17,6 +17,8 @@ export type FoundItem = {
   costPrice: number
   stockQty: number
   barcode: string | null
+  /** 상품의 세는 말. 재고 문구("재고 3병")에 붙는다. */
+  unit: string
 }
 
 const SEARCH_LIMIT = 12
@@ -48,6 +50,7 @@ export async function findItems(rawQuery: string): Promise<FoundItem[]> {
       costPrice: Number(r.cost_price ?? 0),
       stockQty: r.stock_qty ?? 0,
       barcode: r.barcode,
+      unit: r.unit || '개',
     }))
   }
 
@@ -72,6 +75,7 @@ export async function findItems(rawQuery: string): Promise<FoundItem[]> {
     costPrice: Number(r.cost_price ?? 0),
     stockQty: r.stock_qty ?? 0,
     barcode: r.barcode,
+    unit: r.unit || '개',
   }))
 }
 

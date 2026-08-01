@@ -61,6 +61,7 @@ type VariantRow = {
   cost_price: number | null
   stock_qty: number | null
   barcode: string | null
+  unit: string | null
 }
 
 function toFound(r: VariantRow): FoundItem {
@@ -72,11 +73,12 @@ function toFound(r: VariantRow): FoundItem {
     costPrice: Number(r.cost_price ?? 0),
     stockQty: r.stock_qty ?? 0,
     barcode: r.barcode,
+    unit: r.unit || '개',
   }
 }
 
 const VARIANT_COLS =
-  'variant_id, product_name, option_label, sale_price, cost_price, stock_qty, barcode'
+  'variant_id, product_name, option_label, sale_price, cost_price, stock_qty, barcode, unit'
 
 /**
  * 파일의 각 줄을 상품(변형)에 잇는다. 바코드 정확 일치 → 상품명 정확 일치 →

@@ -17,7 +17,9 @@ const axisSchema = z.object({
 const variantSchema = z.object({
   options: z.record(z.string(), z.string()),
   sale_price: z.number().int().min(0).max(1_000_000_000),
-  initial_unit_cost: z.number().int().min(0).max(1_000_000_000),
+  // int 가 아니다 — 박스 기준 입력을 낱개로 환산하면 (박스가 ÷ 입수) 소수가
+  // 나온다. DB 도 numeric(12,2) 라 소수 2자리까지 받는 것이 맞다.
+  initial_unit_cost: z.number().min(0).max(1_000_000_000),
   initial_qty: z.number().int().min(0).max(1_000_000),
   // 0 은 "미입력"이다. DB 는 units_per_pack > 0 만 받으므로 보낼 때 null 로 바꾼다.
   units_per_pack: z.number().int().min(0).max(100_000),
@@ -37,6 +39,13 @@ const payloadSchema = z.object({
   categoryId: z.uuid().nullable(),
   channel: z.string().trim().max(30).nullable(),
   description: z.string().trim().max(500).nullable(),
+  // 10자 상한은 DB check 와 같은 값이다. 폼이 기본 '개' 를 채워 보낸다.
+  unit: z.string().trim().min(1, { error: '단위를 입력하세요' }).max(10, {
+    error: '단위는 10자까지입니다',
+  }),
+  purchaseUnitName: z.string().trim().min(1).max(10, {
+    error: '묶음 이름은 10자까지입니다',
+  }).nullable(),
   // 축이 3개를 넘으면 조합이 폭발하고 휴대폰에서 표가 무너진다.
   optionSchema: z.array(axisSchema).max(3),
   variants: z
@@ -91,7 +100,8 @@ export async function createProduct(
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message }
   }
-  const { name, categoryId, channel, description, optionSchema, variants } = parsed.data
+  const { name, categoryId, channel, description, unit, purchaseUnitName, optionSchema, variants } =
+    parsed.data
 
   // 선언한 축과 변형의 옵션 키가 정확히 일치해야 한다.
   // DB 트리거는 "선언 안 된 키"만 막는다. 축이 빠진 변형은 통과하는데,
@@ -121,9 +131,13 @@ export async function createProduct(
     p_category_id: categoryId ?? undefined,
     p_channel: channel ?? undefined,
     p_description: description ?? undefined,
+    p_unit: unit,
+    p_purchase_unit_name: purchaseUnitName ?? undefined,
     p_option_schema: optionSchema,
     p_variants: variants.map((v) => ({
       ...v,
+      // 박스 환산에서 소수가 왔어도 저장 단위(numeric 12,2)에 맞춰 굳힌다.
+      initial_unit_cost: Math.round(v.initial_unit_cost * 100) / 100,
       units_per_pack: v.units_per_pack > 0 ? v.units_per_pack : null,
     })),
   })
@@ -188,6 +202,12 @@ export async function createCategoryInline(
 const editVariantSchema = z.object({
   variantId: z.uuid(),
   salePrice: z.number().int().min(0).max(1_000_000_000),
+  // int 가 아니다 — 낱개 환산 도우미가 (박스 원가 ÷ 입수) 소수를 만들고,
+  // 이동평균이 만든 기존 원가도 이미 소수일 수 있다 (numeric 12,2).
+  costPrice: z.number().min(0).max(1_000_000_000),
+  // null 은 "수량 안 바꿈". 폼이 처음 값에서 안 바뀐 줄을 null 로 보낸다 —
+  // RPC 의 멱등 조건(같은 값이면 전표 없음)과 이중 방어다.
+  countedQty: z.number().int().min(0).max(1_000_000).nullable(),
   lowStockThreshold: z.number().int().min(0).max(1_000_000),
   // 0 은 "미입력"이다. DB 는 units_per_pack > 0 만 받으므로 보낼 때 null 로 바꾼다.
   unitsPerPack: z.number().int().min(0).max(100_000),
@@ -207,6 +227,12 @@ const editPayloadSchema = z.object({
   categoryId: z.uuid().nullable(),
   channel: z.string().trim().max(30).nullable(),
   description: z.string().trim().max(500).nullable(),
+  unit: z.string().trim().min(1, { error: '단위를 입력하세요' }).max(10, {
+    error: '단위는 10자까지입니다',
+  }),
+  purchaseUnitName: z.string().trim().min(1).max(10, {
+    error: '묶음 이름은 10자까지입니다',
+  }).nullable(),
   variants: z.array(editVariantSchema).max(200),
 })
 
@@ -229,7 +255,8 @@ export async function updateProduct(
   const parsed = editPayloadSchema.safeParse(json)
   if (!parsed.success) return fail(parsed.error.issues[0].message)
 
-  const { productId, name, categoryId, channel, description, variants } = parsed.data
+  const { productId, name, categoryId, channel, description, unit, purchaseUnitName, variants } =
+    parsed.data
 
   // 폼 안에서 바코드가 겹치는 경우. DB 도 막지만 어느 값인지 알려주려면
   // 여기서 먼저 봐야 한다.
@@ -244,9 +271,14 @@ export async function updateProduct(
     p_category_id: categoryId ?? undefined,
     p_channel: channel ?? undefined,
     p_description: description ?? undefined,
+    p_unit: unit,
+    p_purchase_unit_name: purchaseUnitName ?? undefined,
     p_variants: variants.map((v) => ({
       variant_id: v.variantId,
       sale_price: v.salePrice,
+      cost_price: Math.round(v.costPrice * 100) / 100,
+      // null 이면 키를 아예 빼서 RPC 가 실사를 건너뛰게 한다.
+      ...(v.countedQty != null ? { counted_qty: v.countedQty } : {}),
       low_stock_threshold: v.lowStockThreshold,
       barcode: v.barcode,
       units_per_pack: v.unitsPerPack > 0 ? v.unitsPerPack : null,

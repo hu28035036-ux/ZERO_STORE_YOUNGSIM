@@ -55,12 +55,15 @@ export function MovementBadge({ type }: { type: MovementType }) {
 export function StockBadge({
   qty,
   threshold,
+  unit,
 }: {
   qty: number
   threshold: number
+  /** 상품의 세는 말. 안 넘기면 '개' — unit 이전의 호출부와 동작이 같다. */
+  unit?: string | null
 }) {
   if (qty < 0) return <Badge tone="danger">재고 음수 {qty}</Badge>
   if (qty === 0) return <Badge tone="low">품절</Badge>
   if (qty <= threshold) return <Badge tone="low">부족 {qty}</Badge>
-  return <Badge tone="neutral">{qty}개</Badge>
+  return <Badge tone="neutral">{qty}{unit || '개'}</Badge>
 }

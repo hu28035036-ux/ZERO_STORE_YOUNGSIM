@@ -30,7 +30,8 @@ export function QtyDelta({ row }: { row: MovementRow }) {
   if (row.type === 'stocktake') {
     return (
       <span className="text-ink text-sm" data-numeric>
-        {formatQty(row.counted_qty)}개로 맞춤{' '}
+        {formatQty(row.counted_qty)}
+        {row.unit || '개'}로 맞춤{' '}
         <span className={tone}>
           ({sign}
           {formatQty(delta)})

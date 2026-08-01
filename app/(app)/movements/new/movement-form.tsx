@@ -19,6 +19,9 @@ export type VariantTarget = {
   optionLabel: string | null
   stockQty: number
   costPrice: number
+  unit: string
+  unitsPerPack: number | null
+  purchaseUnitName: string | null
 }
 
 export type SupplierOption = { id: string; name: string }
@@ -60,9 +63,26 @@ export function MovementForm({
   const [qty, setQty] = useState('')
   const [direction, setDirection] = useState<'in' | 'out'>('out')
   const [unitCost, setUnitCost] = useState('')
+  // 입고 전용 박스 모드. 매입 단위(입수 ≥2)가 있는 상품에만 열린다.
+  const [entryMode, setEntryMode] = useState<'each' | 'bundle'>('each')
+  const [bundleCount, setBundleCount] = useState('')
+  const [bundlePrice, setBundlePrice] = useState('')
 
-  const n = toInt(qty)
   const today = todayInSeoul()
+
+  const perPack = target.unitsPerPack ?? 0
+  const packName = target.purchaseUnitName || '박스'
+  const unitLabel = target.unit || '개'
+  // 시트가 입수=1 을 "낱개 발주"라는 뜻으로 쓰던 값이라 1 은 박스가 아니다.
+  const canBundle = type === 'purchase' && perPack >= 2
+  const bundleMode = canBundle && entryMode === 'bundle'
+
+  // 환산은 서버가 다시 한다 — 여기 숫자는 미리보기일 뿐이다.
+  const n = bundleMode ? toInt(bundleCount) * perPack : toInt(qty)
+  const eachCost =
+    bundleMode && toInt(bundlePrice) > 0
+      ? Math.round((toInt(bundlePrice) / perPack) * 100) / 100
+      : null
 
   // 등록하면 재고가 어떻게 되는지 미리 보여준다. 부호를 잘못 고른 것을
   // 저장하기 전에 알아차릴 수 있는 유일한 지점이다.
@@ -82,6 +102,7 @@ export function MovementForm({
       <input type="hidden" name="variantId" value={target.variantId} />
       <input type="hidden" name="type" value={type} />
       <input type="hidden" name="direction" value={direction} />
+      <input type="hidden" name="entryMode" value={bundleMode ? 'bundle' : 'each'} />
 
       <Card>
         <CardHeader>
@@ -101,7 +122,8 @@ export function MovementForm({
           <div className="text-sm">
             <span className="text-ink-muted">현재 </span>
             <span className="text-ink font-medium" data-numeric>
-              {formatQty(target.stockQty)}개
+              {formatQty(target.stockQty)}
+              {unitLabel}
             </span>
           </div>
         </CardBody>
@@ -176,30 +198,94 @@ export function MovementForm({
             </div>
           ) : null}
 
-          <NumberInput
-            label={QTY_LABEL[type]}
-            name="qty"
-            value={qty}
-            onChange={(e) => setQty(e.target.value)}
-            placeholder="0"
-            required
-            hint={
-              type === 'stocktake'
-                ? '0 도 넣을 수 있습니다 — 세어보니 없더라는 것도 기록입니다.'
-                : undefined
-            }
-          />
+          {canBundle ? (
+            // 조정의 방향 라디오와 같은 패턴. 매입 단위가 없는 상품은 이
+            // 토글 자체가 없어서 지금까지와 완전히 같다.
+            <div role="radiogroup" aria-label="입고 입력 방식" className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  ['each', `낱개로 (${unitLabel})`],
+                  ['bundle', `${packName}로 (1${packName} = ${perPack}${unitLabel})`],
+                ] as const
+              ).map(([value, text]) => {
+                const on = entryMode === value
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => setEntryMode(value)}
+                    className={cn(
+                      'h-touch rounded-lg border text-sm font-medium transition-colors',
+                      on
+                        ? 'bg-primary text-primary-ink border-primary'
+                        : 'bg-surface text-ink-muted border-border-strong hover:bg-surface-sunken',
+                    )}
+                  >
+                    {text}
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
+
+          {bundleMode ? (
+            <>
+              <NumberInput
+                label={`${packName} 수`}
+                name="bundleCount"
+                value={bundleCount}
+                onChange={(e) => setBundleCount(e.target.value)}
+                placeholder="0"
+                required
+                hint={
+                  toInt(bundleCount) > 0
+                    ? `${formatQty(toInt(bundleCount))}${packName} = ${formatQty(n)}${unitLabel}`
+                    : undefined
+                }
+              />
+              <NumberInput
+                label={`${packName}당 매입가`}
+                name="bundlePrice"
+                value={bundlePrice}
+                onChange={(e) => setBundlePrice(e.target.value)}
+                placeholder="0"
+                hint={
+                  eachCost != null
+                    ? `낱개 ${eachCost.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}원으로 저장됩니다`
+                    : '비워두면 지금 원가를 그대로 씁니다.'
+                }
+              />
+            </>
+          ) : (
+            <NumberInput
+              label={QTY_LABEL[type]}
+              name="qty"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              placeholder="0"
+              required
+              hint={
+                type === 'stocktake'
+                  ? '0 도 넣을 수 있습니다 — 세어보니 없더라는 것도 기록입니다.'
+                  : undefined
+              }
+            />
+          )}
 
           {type === 'purchase' ? (
             <>
-              <NumberInput
-                label="입고 단가"
-                name="unitCost"
-                value={unitCost}
-                onChange={(e) => setUnitCost(e.target.value)}
-                placeholder="0"
-                hint="비워두면 지금 원가를 그대로 씁니다."
-              />
+              {bundleMode ? null : (
+                <NumberInput
+                  label="입고 단가"
+                  name="unitCost"
+                  value={unitCost}
+                  onChange={(e) => setUnitCost(e.target.value)}
+                  placeholder="0"
+                  hint="비워두면 지금 원가를 그대로 씁니다."
+                />
+              )}
               <Select label="거래처" name="supplierId" defaultValue="">
                 <option value="">선택 안 함</option>
                 {suppliers.map((s) => (
@@ -236,10 +322,21 @@ export function MovementForm({
       </Card>
 
       <Card className="flex items-baseline justify-between gap-3 px-4 py-3">
-        <span className="text-ink-muted text-sm">등록하면</span>
+        <span className="text-ink-muted text-sm">
+          등록하면
+          {bundleMode && toInt(bundleCount) > 0 ? (
+            <span className="text-ink-subtle" data-numeric>
+              {' '}
+              ({formatQty(toInt(bundleCount))}
+              {packName} = {formatQty(n)}
+              {unitLabel})
+            </span>
+          ) : null}
+        </span>
         <span className="text-sm">
           <span className="text-ink-muted" data-numeric>
-            {formatQty(target.stockQty)}개
+            {formatQty(target.stockQty)}
+            {unitLabel}
           </span>
           <span className="text-ink-subtle"> → </span>
           <span
@@ -249,7 +346,8 @@ export function MovementForm({
             )}
             data-numeric
           >
-            {formatQty(after)}개
+            {formatQty(after)}
+            {unitLabel}
           </span>
         </span>
       </Card>
@@ -268,7 +366,11 @@ export function MovementForm({
         type="submit"
         size="lg"
         full
-        disabled={pending || (type !== 'stocktake' && n < 1)}
+        disabled={
+          pending ||
+          (type !== 'stocktake' && n < 1) ||
+          (bundleMode && toInt(bundleCount) < 1)
+        }
       >
         {pending ? '등록 중…' : `${MOVEMENT_LABEL[type]} 등록`}
       </Button>

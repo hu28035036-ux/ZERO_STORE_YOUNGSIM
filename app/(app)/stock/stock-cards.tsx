@@ -35,6 +35,7 @@ export function StockCards({ rows }: { rows: StockRow[] }) {
                 <StockBadge
                   qty={row.stock_qty ?? 0}
                   threshold={row.low_stock_threshold ?? 0}
+                  unit={row.unit}
                 />
               </div>
 

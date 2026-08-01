@@ -36,6 +36,20 @@ export function formatQty(value: number | null | undefined): string {
 }
 
 /**
+ * 단위 직접 입력의 추천 목록. 계량 단위(kg·ml)는 넣지 않는다 — 수량이
+ * integer 라 1.5kg 을 표현할 수 없고, 목록에 있으면 있는 줄 알고 쓴다.
+ */
+export const UNIT_SUGGESTIONS = ['개', '병', '캔', '봉지', '팩', '박스', '세트', '장', '권', '줄']
+
+/** "12병" — unit 이 없는 호출부는 '개' 로 동작이 지금과 같다. */
+export function formatQtyUnit(
+  qty: number | null | undefined,
+  unit?: string | null,
+): string {
+  return `${formatQty(qty)}${unit || '개'}`
+}
+
+/**
  * 집계 기준 시각대. DB 쪽 뷰·함수가 전부 KST 로 날짜를 자르므로
  * 화면에서 날짜를 만들 때도 같은 기준을 써야 하루씩 어긋나지 않는다.
  */

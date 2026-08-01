@@ -86,6 +86,9 @@ export default async function NewMovementPage({
               optionLabel: target.option_label,
               stockQty: target.stock_qty ?? 0,
               costPrice: target.cost_price ?? 0,
+              unit: target.unit ?? '개',
+              unitsPerPack: target.units_per_pack,
+              purchaseUnitName: target.purchase_unit_name,
             } satisfies VariantTarget
           }
           suppliers={supplierOptions}
@@ -169,6 +172,7 @@ export default async function NewMovementPage({
                         <StockBadge
                           qty={row.stock_qty ?? 0}
                           threshold={row.low_stock_threshold ?? 0}
+                          unit={row.unit}
                         />
                         <ChevronRight
                           size={18}

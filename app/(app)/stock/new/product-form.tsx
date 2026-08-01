@@ -8,11 +8,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input, NumberInput } from '@/components/ui/field'
+import { cn } from '@/lib/cn'
+import { UNIT_SUGGESTIONS } from '@/lib/constants'
 
 import { createProduct, type CreateProductState } from '../actions'
 import { type CategoryOption } from '../categories'
 import { CategorySelect } from '../category-select'
-import { Cell, toInt } from '../variant-fields'
+import { Cell, marginLine, toInt, toUnitValues, wonExact } from '../variant-fields'
 
 type Axis = { id: number; name: string; raw: string }
 
@@ -81,7 +83,12 @@ export function ProductForm({
   const [name, setName] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [channel, setChannel] = useState('')
+  const [unit, setUnit] = useState('개')
+  const [purchaseUnitName, setPurchaseUnitName] = useState('')
   const [description, setDescription] = useState('')
+  // 켜면 판매가·원가·기초수량 칸이 "박스당 값"이 된다. 저장 직전에 낱개로
+  // 환산하므로 서버 계약은 그대로다 — 입수(≥2)가 있는 줄에만 적용된다.
+  const [boxMode, setBoxMode] = useState(false)
   const [axes, setAxes] = useState<Axis[]>([])
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   const [bulk, setBulk] = useState({ salePrice: '', unitCost: '', threshold: '' })
@@ -127,28 +134,37 @@ export function ProductForm({
         name: name.trim(),
         categoryId: categoryId || null,
         channel: channel.trim() || null,
+        unit: unit.trim() || '개',
+        purchaseUnitName: purchaseUnitName.trim() || null,
         description: description.trim() || null,
         optionSchema: parsedAxes,
         variants: combos.map((options) => {
           const d = drafts[comboKey(options, axisNames)] ?? emptyDraft
+          // 박스 기준 토글은 순수 UI 다. payload 는 언제나 낱개로 나간다.
+          const u = toUnitValues(d, boxMode)
           return {
             options,
-            sale_price: toInt(d.salePrice),
-            initial_unit_cost: toInt(d.unitCost),
-            initial_qty: toInt(d.qty),
+            sale_price: u.sale,
+            initial_unit_cost: u.cost,
+            initial_qty: u.qty,
             units_per_pack: toInt(d.pack),
             low_stock_threshold: toInt(d.threshold),
             barcode: d.barcode.trim() || null,
           }
         }),
       }),
-    [name, categoryId, channel, description, parsedAxes, combos, axisNames, drafts, emptyDraft],
+    [name, categoryId, channel, unit, purchaseUnitName, description, boxMode, parsedAxes, combos, axisNames, drafts, emptyDraft],
   )
 
   // 이름만 쓰고 값을 안 넣었거나 그 반대인 축은 조용히 무시된다.
   // 그대로 두면 "옵션을 넣었는데 변형이 하나뿐"인 상황이 되므로 짚어준다.
   const halfFilled = axes.some(
     (a) => (a.name.trim() !== '') !== (parseValues(a.raw).length > 0),
+  )
+
+  // 입수(≥2)가 있는 줄이 하나라도 있어야 박스 기준 입력이 성립한다.
+  const hasPack = combos.some(
+    (options) => toInt(draftOf(comboKey(options, axisNames)).pack) >= 2,
   )
 
   const duplicateAxisName =
@@ -215,6 +231,32 @@ export function ProductForm({
           <datalist id="channel-options">
             {channels.map((c) => (
               <option key={c} value={c} />
+            ))}
+          </datalist>
+          <div className="grid grid-cols-2 gap-3">
+            {/* 여기도 datalist — 단위는 정해진 목록이 아니라 자유 입력이고,
+                추천은 고르기 편하라고만 있다. DB 에는 친 글자 그대로 간다. */}
+            <Input
+              label="단위 (세는 말)"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              placeholder="개"
+              maxLength={10}
+              list="unit-suggestions"
+              hint="재고를 세는 말. 예: 개·병·봉지"
+            />
+            <Input
+              label="묶음 이름 (선택)"
+              value={purchaseUnitName}
+              onChange={(e) => setPurchaseUnitName(e.target.value)}
+              placeholder="박스"
+              maxLength={10}
+              hint="박스로 사 오면 넣으세요. 입수는 아래 줄에 있습니다."
+            />
+          </div>
+          <datalist id="unit-suggestions">
+            {UNIT_SUGGESTIONS.map((u) => (
+              <option key={u} value={u} />
             ))}
           </datalist>
           <Input
@@ -319,8 +361,31 @@ export function ProductForm({
       <Card>
         <CardHeader>
           <CardTitle>재고 단위 {combos.length}개</CardTitle>
+          {hasPack ? (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={boxMode}
+              onClick={() => setBoxMode((v) => !v)}
+              className={cn(
+                'h-9 rounded-lg border px-3 text-sm font-medium transition-colors',
+                boxMode
+                  ? 'bg-primary text-primary-ink border-primary'
+                  : 'bg-surface text-ink-muted border-border-strong hover:bg-surface-sunken',
+              )}
+            >
+              {purchaseUnitName.trim() || '박스'} 기준으로 입력
+            </button>
+          ) : null}
         </CardHeader>
         <CardBody className="flex flex-col gap-3">
+          {boxMode && hasPack ? (
+            <p className="text-ink-muted text-sm leading-relaxed">
+              판매가·원가·기초수량을 {purchaseUnitName.trim() || '박스'}당 값으로
+              적으세요. 저장은 낱개로 환산해서 됩니다 — 줄 아래에 환산 결과가
+              보입니다. 입수가 없는 줄은 낱개 그대로입니다.
+            </p>
+          ) : null}
           {combos.length > 1 ? (
             <div className="bg-surface-sunken flex flex-wrap items-center gap-2 rounded-lg p-3">
               <span className="text-ink-muted w-full text-xs">전체에 한 번에 넣기</span>
@@ -375,6 +440,15 @@ export function ProductForm({
             const key = comboKey(options, axisNames)
             const label = axisNames.map((n) => options[n]).join(' / ') || '옵션 없음'
             const d = draftOf(key)
+
+            // 저장될 낱개 값 그대로 계산해서 보여준다 — payload 와 같은 함수를
+            // 쓰므로 미리보기와 저장이 어긋날 수 없다.
+            const u = toUnitValues(d, boxMode)
+            const m = marginLine(u.sale, u.cost)
+            const rowNote = u.converted
+              ? `낱개 ${wonExact(u.sale)} · 원가 ${wonExact(u.cost)} · ${u.qty}${unit.trim() || '개'}${m ? ` — ${m.text}` : ''}`
+              : m?.text
+            const rowNegative = m?.negative ?? false
 
             return (
               <div
@@ -454,6 +528,18 @@ export function ProductForm({
                     </div>
                   </Cell>
                 </div>
+
+                {rowNote ? (
+                  <p
+                    className={cn(
+                      'col-span-2 -mt-1 text-xs sm:col-span-full',
+                      rowNegative ? 'text-danger' : 'text-ink-muted',
+                    )}
+                    data-numeric
+                  >
+                    {rowNote}
+                  </p>
+                ) : null}
               </div>
             )
           })}

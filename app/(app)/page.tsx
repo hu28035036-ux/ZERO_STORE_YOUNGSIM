@@ -15,7 +15,7 @@ export default async function HomePage() {
     supabase.from('v_stock_valuation').select('*').maybeSingle(),
     supabase
       .from('v_low_stock')
-      .select('variant_id, product_name, option_label, stock_qty, low_stock_threshold')
+      .select('variant_id, product_name, option_label, stock_qty, low_stock_threshold, unit')
       .order('stock_qty')
       .limit(5),
     supabase.rpc('stats_summary', { p_from: today, p_to: today }),
@@ -101,7 +101,9 @@ export default async function HomePage() {
                   ) : null}
                 </div>
                 <Badge tone={(row.stock_qty ?? 0) < 0 ? 'danger' : 'low'}>
-                  {row.stock_qty ?? 0}개 / 기준 {row.low_stock_threshold ?? 0}개
+                  {row.stock_qty ?? 0}
+                  {row.unit || '개'} / 기준 {row.low_stock_threshold ?? 0}
+                  {row.unit || '개'}
                 </Badge>
               </li>
             ))}

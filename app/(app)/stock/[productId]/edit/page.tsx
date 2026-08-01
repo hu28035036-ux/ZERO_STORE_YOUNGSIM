@@ -22,7 +22,7 @@ export default async function EditProductPage({
   const [product, rows, categories, channelRows] = await Promise.all([
     supabase
       .from('products')
-      .select('id, name, category_id, channel, description')
+      .select('id, name, category_id, channel, unit, purchase_unit_name, description')
       .eq('id', productId)
       .maybeSingle(),
     // 변형 값과 재고·원가를 한 번에 받으려고 뷰를 쓴다. 옵션 라벨도 뷰가 만든다.
@@ -80,11 +80,12 @@ export default async function EditProductPage({
     variantId: v.variant_id!,
     label: v.option_label ?? '옵션 없음',
     salePrice: String(v.sale_price ?? 0),
+    costPrice: String(Number(v.cost_price ?? 0)),
+    qty: String(v.stock_qty ?? 0),
     lowStockThreshold: String(v.low_stock_threshold ?? 0),
     unitsPerPack: v.units_per_pack != null ? String(v.units_per_pack) : '',
     barcode: v.barcode ?? '',
     stockQty: v.stock_qty ?? 0,
-    costPrice: Number(v.cost_price ?? 0),
   }))
 
   const channels = [
@@ -100,6 +101,8 @@ export default async function EditProductPage({
         initialName={product.data.name}
         initialCategoryId={product.data.category_id ?? ''}
         initialChannel={product.data.channel ?? ''}
+        initialUnit={product.data.unit ?? '개'}
+        initialPurchaseUnitName={product.data.purchase_unit_name ?? ''}
         initialDescription={product.data.description ?? ''}
         categories={options}
         channels={channels}

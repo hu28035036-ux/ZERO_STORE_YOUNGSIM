@@ -103,6 +103,7 @@ export function StockTable({
                 <StockBadge
                   qty={row.stock_qty ?? 0}
                   threshold={row.low_stock_threshold ?? 0}
+                  unit={row.unit}
                 />
               </td>
               <td className="text-ink px-3 py-2.5 text-right" data-numeric>

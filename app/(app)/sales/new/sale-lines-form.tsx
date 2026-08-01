@@ -19,6 +19,7 @@ type CartLine = {
   productName: string
   optionLabel: string | null
   stockQty: number
+  unit: string
   qty: number
   /** 문자열로 들고 있어야 지웠다 다시 칠 수 있다. 숫자로 두면 빈 칸이 0 이 된다. */
   priceText: string
@@ -88,6 +89,7 @@ export function SaleLinesForm({ device }: { device: Device }) {
           productName: item.productName,
           optionLabel: item.optionLabel,
           stockQty: item.stockQty,
+          unit: item.unit,
           qty: 1,
           priceText: String(item.salePrice),
         },
@@ -241,7 +243,8 @@ export function SaleLinesForm({ device }: { device: Device }) {
                       {formatWon(c.salePrice)}
                     </span>
                     <Badge tone={c.stockQty <= 0 ? 'low' : 'neutral'}>
-                      {formatQty(c.stockQty)}개
+                      {formatQty(c.stockQty)}
+                      {c.unit}
                     </Badge>
                   </span>
                 </button>
@@ -292,7 +295,8 @@ export function SaleLinesForm({ device }: { device: Device }) {
                         // 막지는 않는다. 입고를 깜빡한 물건 때문에 계산을 못 하는
                         // 것이 더 나쁘다. 대신 눈에 보이게 둔다.
                         <p className="text-low mt-1 text-xs">
-                          재고 {formatQty(line.stockQty)}개보다 많이 팝니다
+                          재고 {formatQty(line.stockQty)}
+                          {line.unit}보다 많이 팝니다
                         </p>
                       ) : null}
                     </div>

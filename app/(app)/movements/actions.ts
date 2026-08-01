@@ -20,6 +20,10 @@ const schema = z.object({
   qty: z.number().int().min(0).max(1_000_000),
   direction: z.enum(['in', 'out']),
   unitCost: z.number().int().min(0).max(1_000_000_000),
+  // 입고 박스 모드. bundle 이면 qty·unitCost 대신 이 둘을 쓴다.
+  entryMode: z.enum(['each', 'bundle']),
+  bundleCount: z.number().int().min(0).max(10_000),
+  bundlePrice: z.number().int().min(0).max(1_000_000_000),
   supplierId: z.uuid().nullable(),
   note: z.string().trim().max(200).nullable(),
   date: z.string().nullable(),
@@ -57,14 +61,57 @@ export async function recordMovement(
     qty: toInt(formData.get('qty')),
     direction: text(formData.get('direction')) === 'in' ? 'in' : 'out',
     unitCost: toInt(formData.get('unitCost')),
+    entryMode: text(formData.get('entryMode')) === 'bundle' ? 'bundle' : 'each',
+    bundleCount: toInt(formData.get('bundleCount')),
+    bundlePrice: toInt(formData.get('bundlePrice')),
     supplierId: text(formData.get('supplierId')) || null,
     note: text(formData.get('note')) || null,
     date: text(formData.get('date')) || null,
   })
 
   if (!parsed.success) return { error: parsed.error.issues[0].message }
-  const { variantId, type, qty, direction, unitCost, supplierId, note, date } =
-    parsed.data
+  const { variantId, type, direction, supplierId, date } = parsed.data
+  let { qty, unitCost, note } = parsed.data
+
+  const supabase = await createClient()
+
+  // 박스 모드 환산은 서버가 한다. 클라이언트가 낱개 수를 실어 보내는 설계는
+  // 위조 한 번에 재고가 틀어진다 — 서버 액션은 UI 없이도 POST 로 불린다.
+  const bundleMode = type === 'purchase' && parsed.data.entryMode === 'bundle'
+  if (bundleMode) {
+    const { data: v, error } = await supabase
+      .from('v_variant_stock')
+      .select('units_per_pack, purchase_unit_name')
+      .eq('variant_id', variantId)
+      .maybeSingle()
+    if (error) return { error: error.message }
+
+    const perPack = v?.units_per_pack ?? 0
+    if (perPack < 2) {
+      // 입수 1 은 시트가 "낱개 발주"라는 뜻으로 쓰던 값이라 박스 모드가 성립하지 않는다.
+      return { error: '이 상품에는 입수(1묶음당 낱개 수)가 없습니다. 상품 수정에서 먼저 넣으세요.' }
+    }
+
+    if (parsed.data.bundleCount < 1) {
+      return { error: '박스 수는 1 이상이어야 합니다' }
+    }
+
+    qty = parsed.data.bundleCount * perPack
+    if (qty > 1_000_000) return { error: '수량이 너무 큽니다' }
+
+    // 박스가 ÷ 입수는 원 아래 소수가 남는다. 저장 컬럼(numeric 12,2)에 맞춰
+    // 2자리로 굳힌다 — 나눠떨어지지 않으면 매입액이 실지불액과 원 미만으로
+    // 어긋나는데, 재고 파악이라는 목적에서 허용하고 폼 미리보기로 보여준다.
+    unitCost =
+      parsed.data.bundlePrice > 0
+        ? Math.round((parsed.data.bundlePrice / perPack) * 100) / 100
+        : 0
+
+    // 몇 박스가 들어왔는지는 전표에 남아야 나중에 읽힌다. 사용자 메모는 뒤에
+    // 잇고, 합쳐서 200자(zod 상한)에 맞춰 자른다.
+    const prefix = `[${parsed.data.bundleCount}${v?.purchase_unit_name || '박스'} × ${perPack}개]`
+    note = `${prefix}${note ? ` ${note}` : ''}`.slice(0, 200)
+  }
 
   // 실사만 0 이 뜻을 갖는다 ("세어보니 없더라"). 나머지는 0 이면 넣을 게 없다.
   if (type !== 'stocktake' && qty < 1) {
@@ -76,8 +123,6 @@ export async function recordMovement(
     // 아직 일어나지 않은 일을 원장에 넣으면 통계가 미래로 샌다.
     return { error: '앞날짜로는 등록할 수 없습니다' }
   }
-
-  const supabase = await createClient()
 
   if (type === 'stocktake') {
     // record_stocktake 에는 occurred_at 인자가 없다. 실사는 언제나 "지금 센 것"이라

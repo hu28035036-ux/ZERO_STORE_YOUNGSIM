@@ -486,6 +486,18 @@ export function ImportPreview({
   )
 }
 
+/**
+ * 아직 상품에 못 이은 줄의 수량 단위. 상품이 정해지지 않아 단위도 모른다 —
+ * 후보들이 전부 같은 단위면 그걸 쓰고, 아니면 '개' 로 둔다.
+ */
+function lineUnit(l: Line): string {
+  const st = l.state
+  const candidates =
+    st.kind === 'ambiguous' || st.kind === 'missing' ? st.candidates : []
+  const units = [...new Set(candidates.map((c) => c.unit))]
+  return units.length === 1 ? units[0] : '개'
+}
+
 /** 확인 필요 줄 — 원문과 후보를 보여주고 사람이 잇게 한다. */
 function UnresolvedList({
   lines,
@@ -514,7 +526,8 @@ function UnresolvedList({
                 {l.qty != null ? (
                   <span className="text-ink-muted" data-numeric>
                     {' '}
-                    · {formatQty(l.qty)}개
+                    · {formatQty(l.qty)}
+                    {lineUnit(l)}
                   </span>
                 ) : null}
               </p>
@@ -556,7 +569,8 @@ function UnresolvedList({
                               {formatWon(c.salePrice)}
                             </span>
                             <Badge tone={c.stockQty <= 0 ? 'low' : 'neutral'}>
-                              {formatQty(c.stockQty)}개
+                              {formatQty(c.stockQty)}
+                              {c.unit}
                             </Badge>
                           </span>
                         </button>
@@ -615,7 +629,8 @@ function StockDelta({
                   <span className="text-ink-muted">{formatQty(item.stockQty)}</span>
                   <span className="text-ink-subtle"> → </span>
                   <span className={cn('font-semibold', after < 0 ? 'text-danger' : 'text-ink')}>
-                    {formatQty(after)}개
+                    {formatQty(after)}
+                    {item.unit}
                   </span>
                 </p>
               </div>
