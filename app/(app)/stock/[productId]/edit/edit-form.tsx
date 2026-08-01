@@ -28,7 +28,8 @@ export type EditVariant = {
   stockQty: number
 }
 
-const GRID = 'sm:grid-cols-[1.3fr_1fr_1fr_0.8fr_0.8fr_0.7fr_1.2fr]'
+// 여섯째 칸(박스당 개수)이 "입수" 두 글자에 맞춰 좁았다. 라벨이 길어져서 넓힌다.
+const GRID = 'sm:grid-cols-[1.2fr_1fr_1fr_0.8fr_0.8fr_1fr_1.2fr]'
 
 export function EditProductForm({
   productId,
@@ -78,6 +79,9 @@ export function EditProductForm({
 
   const unitLabel = unit.trim() || '개'
   const packName = purchaseUnitName.trim() || '박스'
+  // 코드·DB·문서는 이 값을 "입수"(units_per_pack)라 부르지만 화면에는 안 쓴다.
+  // 사용자가 입수를 "갖고 있는 박스 수"로 읽고 2 를 넣은 사고가 있었다.
+  const packLabel = `${packName}당 개수`
 
   // 입수(≥2)가 있는 줄이 하나라도 있어야 환산이 성립한다.
   const canConvert = variants.some((v) => toInt(v.unitsPerPack) >= 2)
@@ -184,7 +188,7 @@ export function EditProductForm({
               onChange={(e) => setPurchaseUnitName(e.target.value)}
               placeholder="박스"
               maxLength={10}
-              hint="박스로 사 오면. 입수는 아래 줄에 있습니다."
+              hint={`${packName}로 사 오면. ${packLabel}는 아래 줄에 있습니다.`}
             />
           </div>
           <datalist id="unit-suggestions">
@@ -224,9 +228,18 @@ export function EditProductForm({
           ) : canConvert ? (
             <p className="text-ink-muted text-sm leading-relaxed">
               판매가·원가가 {packName}당 값으로 들어와 있으면 위 버튼이 수량
-              ×입수, 가격 ÷입수로 바꿔 줍니다. 저장 전까지 반영되지 않습니다.
+              ×{packLabel}, 가격 ÷{packLabel}로 바꿔 줍니다. 저장 전까지
+              반영되지 않습니다. 값이 이미 낱개면 누르지 마세요.
             </p>
           ) : null}
+
+          {/* 이 안내는 조건 없이 늘 보인다. 뜻을 오해한 사람은 자기가 오해했다는
+              걸 모르므로, 박스를 쓸 때만 보여주면 정작 필요한 사람이 못 본다. */}
+          <p className="text-ink-muted text-sm leading-relaxed">
+            {packLabel}는 {packName} 하나에 낱개가 몇 개 들었는지입니다 (예: 24).
+            갖고 있는 {packName} 수가 아닙니다 — 낱개로만 사 오면 비워두세요.
+            이 값을 고쳐도 수량은 바뀌지 않습니다.
+          </p>
 
           <div
             className={`text-ink-muted hidden gap-2 px-1 text-xs sm:grid ${GRID}`}
@@ -237,7 +250,7 @@ export function EditProductForm({
             <span>원가</span>
             <span>수량</span>
             <span>최소재고</span>
-            <span>입수</span>
+            <span>{packLabel}</span>
             <span>바코드</span>
           </div>
 
@@ -296,9 +309,9 @@ export function EditProductForm({
                     }
                   />
                 </Cell>
-                <Cell label="입수">
+                <Cell label={packLabel}>
                   <NumberInput
-                    aria-label={`${v.label} 입수`}
+                    aria-label={`${v.label} ${packLabel}`}
                     placeholder="선택"
                     value={v.unitsPerPack}
                     onChange={(e) =>

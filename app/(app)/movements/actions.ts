@@ -97,7 +97,8 @@ export async function recordMovement(
       // 근거로만 쓰는 게 아니라 상품에 저장한다 — 안 그러면 매번 다시 물어야
       // 하고, 수정 화면의 낱개 환산 도우미도 계속 입수를 모른 채로 남는다.
       if (parsed.data.bundleUnits < 2) {
-        return { error: `1${v?.purchase_unit_name || '박스'}당 낱개 수를 넣으세요 (2 이상)` }
+        const pn = v?.purchase_unit_name || '박스'
+        return { error: `${pn}당 개수를 넣으세요 — ${pn} 하나에 몇 개인지 (2 이상)` }
       }
       perPack = parsed.data.bundleUnits
 

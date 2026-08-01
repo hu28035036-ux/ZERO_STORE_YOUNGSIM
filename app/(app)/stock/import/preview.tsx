@@ -475,7 +475,7 @@ export function ProductImportPreview({
                 <th className="py-1.5 pr-3 font-medium">분류</th>
                 <th className="py-1.5 pr-3 font-medium">유통</th>
                 <th className="py-1.5 pr-3 font-medium">코드</th>
-                <th className="py-1.5 pr-3 text-right font-medium">입수</th>
+                <th className="py-1.5 pr-3 text-right font-medium">박스당 개수</th>
                 <th className="py-1.5 pr-3 text-right font-medium">원가</th>
                 <th className="py-1.5 pr-3 text-right font-medium">판매가</th>
                 <th className="py-1.5 pr-3 text-right font-medium">초도수량</th>

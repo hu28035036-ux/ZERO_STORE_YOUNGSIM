@@ -243,13 +243,15 @@ export function MovementForm({
             <>
               {hasPack ? null : (
                 <NumberInput
-                  label={`1${packName}당 낱개 수 (입수)`}
+                  label={`${packName}당 개수`}
                   name="bundleUnits"
                   value={bundleUnits}
                   onChange={(e) => setBundleUnits(e.target.value)}
-                  placeholder="예: 30"
+                  placeholder="예: 24"
                   required
-                  hint="이 상품에 저장돼서 다음부터는 묻지 않습니다. 2 이상이어야 합니다."
+                  // 단위를 그대로 끼우면 "개가 몇 개"처럼 읽힌다. 조사까지
+                  // 맞추느니(withRo 처럼) 여기서는 '낱개'로 고정하는 게 낫다.
+                  hint={`${packName} 하나에 낱개가 몇 개 들었는지입니다 (2 이상). 받은 ${packName} 수가 아닙니다 — 그건 아래 칸입니다. 이 상품에 저장돼서 다음부터는 묻지 않습니다.`}
                 />
               )}
               <NumberInput

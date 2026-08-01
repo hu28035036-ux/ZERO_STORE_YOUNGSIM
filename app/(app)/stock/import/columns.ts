@@ -26,7 +26,9 @@ export const COLUMN_LABEL: Record<ProductColumnKey, string> = {
   code: '상품코드',
   channel: '유통방식',
   category: '분류(소분류)',
-  pack: '입수',
+  // 여기만 "입수"를 괄호로 남긴다 — 짝지을 시트의 열 이름이 실제로 '입수' 라서,
+  // 앱 용어로만 부르면 어느 열을 고를지 알 수 없다.
+  pack: '박스당 개수 (입수)',
   cost: '매입가(원가)',
   price: '판매가',
 }
@@ -36,7 +38,7 @@ export const COLUMN_HINT: Record<ProductColumnKey, string> = {
   code: '발주 코드. 바코드처럼 검색·스캔에 쓰입니다',
   channel: 'CJFW·택배·쿠팡처럼 어디서 들어오는지',
   category: '없는 분류는 등록하면서 새로 만들 수 있습니다',
-  pack: '한 박스에 든 낱개 수. 초도 수량으로도 씁니다',
+  pack: '박스 하나에 든 낱개 수. 박스 수가 아닙니다. 초도 수량으로도 씁니다',
   cost: 'VAT 포함 매입가를 권장합니다 (마진 계산 기준)',
   price: '없으면 0원으로 두고 나중에 채울 수 있습니다',
 }

@@ -63,7 +63,8 @@ function parseValues(raw: string): string[] {
   return [...seen]
 }
 
-const GRID = 'sm:grid-cols-[1.6fr_1fr_1fr_0.8fr_0.8fr_1fr_1.4fr]'
+// 다섯째 칸(박스당 개수)이 "입수" 두 글자에 맞춰 좁았다. 라벨이 길어져서 넓힌다.
+const GRID = 'sm:grid-cols-[1.5fr_1fr_1fr_0.8fr_1fr_1fr_1.4fr]'
 
 export function ProductForm({
   categories,
@@ -167,6 +168,11 @@ export function ProductForm({
     (options) => toInt(draftOf(comboKey(options, axisNames)).pack) >= 2,
   )
 
+  // 코드·DB·문서는 이 값을 "입수"(units_per_pack)라 부르지만 화면에는 안 쓴다.
+  // 사용자가 입수를 "갖고 있는 박스 수"로 읽고 2 를 넣은 사고가 있었다.
+  const packName = purchaseUnitName.trim() || '박스'
+  const packLabel = `${packName}당 개수`
+
   const duplicateAxisName =
     new Set(axisNames).size !== axisNames.length && axisNames.length > 0
 
@@ -251,7 +257,7 @@ export function ProductForm({
               onChange={(e) => setPurchaseUnitName(e.target.value)}
               placeholder="박스"
               maxLength={10}
-              hint="박스로 사 오면 넣으세요. 입수는 아래 줄에 있습니다."
+              hint={`${packName}로 사 오면 넣으세요. ${packLabel}는 아래 줄에 있습니다.`}
             />
           </div>
           <datalist id="unit-suggestions">
@@ -374,16 +380,22 @@ export function ProductForm({
                   : 'bg-surface text-ink-muted border-border-strong hover:bg-surface-sunken',
               )}
             >
-              {purchaseUnitName.trim() || '박스'} 기준으로 입력
+              {packName} 기준으로 입력
             </button>
           ) : null}
         </CardHeader>
         <CardBody className="flex flex-col gap-3">
+          {/* 이 안내는 조건 없이 늘 보인다. 뜻을 오해한 사람은 자기가 오해했다는
+              걸 모르므로, 박스를 쓸 때만 보여주면 정작 필요한 사람이 못 본다. */}
+          <p className="text-ink-muted text-sm leading-relaxed">
+            {packLabel}는 {packName} 하나에 낱개가 몇 개 들었는지입니다 (예: 24).
+            갖고 있는 {packName} 수가 아닙니다 — 낱개로만 사 오면 비워두세요.
+          </p>
           {boxMode && hasPack ? (
             <p className="text-ink-muted text-sm leading-relaxed">
-              판매가·원가·기초수량을 {purchaseUnitName.trim() || '박스'}당 값으로
-              적으세요. 저장은 낱개로 환산해서 됩니다 — 줄 아래에 환산 결과가
-              보입니다. 입수가 없는 줄은 낱개 그대로입니다.
+              판매가·원가·기초수량을 {packName}당 값으로 적으세요. 저장은 낱개로
+              환산해서 됩니다 — 줄 아래에 환산 결과가 보입니다. {packLabel}가 없는
+              줄은 낱개 그대로입니다.
             </p>
           ) : null}
           {combos.length > 1 ? (
@@ -431,7 +443,7 @@ export function ProductForm({
             <span>판매가</span>
             <span>원가</span>
             <span>기초수량</span>
-            <span>입수</span>
+            <span>{packLabel}</span>
             <span>최소재고</span>
             <span>바코드</span>
           </div>
@@ -483,9 +495,9 @@ export function ProductForm({
                     onChange={(e) => setDraft(key, { qty: e.target.value })}
                   />
                 </Cell>
-                <Cell label="입수">
+                <Cell label={packLabel}>
                   <NumberInput
-                    aria-label={`${label} 입수`}
+                    aria-label={`${label} ${packLabel}`}
                     placeholder="선택"
                     value={d.pack}
                     onChange={(e) => setDraft(key, { pack: e.target.value })}
