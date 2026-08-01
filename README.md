@@ -102,13 +102,19 @@ User Metadata 에 `display_name` 으로 넣으면 그대로 쓰이고, 없으면
 
 ### 어느 브랜치가 프로덕션인가
 
-Vercel 의 프로덕션 브랜치는 저장소 기본 브랜치(`main`)다. 작업은
-`claude/inventory-management-planning-fk6i1t` 에서 하고 있으므로 **거기에 푸시하면
-preview 배포가 된다.** https://zero-store-youngsim.vercel.app 를 갱신하려면 둘 중
-하나다:
+Vercel 의 프로덕션 브랜치는 저장소 기본 브랜치(`main`)다. 작업 브랜치에
+푸시하면 **preview 배포**가 된다.
 
-- 작업 폴더에서 `vercel --prod` (지금 올라가 있는 것이 이 방식이다)
-- `main` 에 머지 — 그러면 이후로는 푸시마다 자동으로 프로덕션이 갱신된다
+**2026-08-01 부터 main 머지 방식이다.** 작업 브랜치를 main 으로 fast-forward
+푸시했고, 이제 **main 에 푸시할 때마다 자동으로 프로덕션이 갱신된다**
+(`vercel --prod` 를 손으로 돌릴 필요가 없다). 라이브를 갱신하는 절차:
+
+```
+git push origin <작업브랜치>:main   # main 이 조상일 때 (fast-forward)
+```
+
+fast-forward 가 안 되면 main 을 체크아웃해 머지한 뒤 푸시한다. 배포가 나갔는지는
+로그인 페이지의 `/_next/static/chunks/` 지문이 바뀌는 것으로 확인할 수 있다.
 
 ## 데이터 모델
 
