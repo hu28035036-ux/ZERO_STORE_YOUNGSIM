@@ -4,7 +4,7 @@ import { StockBadge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { formatWon } from '@/lib/constants'
 
-import type { StockRow } from './query'
+import { posSubtitle, type StockRow } from './query'
 
 /**
  * 휴대폰용 재고 목록.
@@ -57,8 +57,12 @@ export function StockCards({ rows }: { rows: StockRow[] }) {
                 ) : null}
               </div>
 
-              {row.category_name || row.barcode ? (
+              {/* POS 메뉴명은 상품명 바로 아래가 아니라 여기다 — 그 자리는
+                  option_label 이 쓰고 있고, 둘을 겹쳐 놓으면 어느 쪽이 옵션이고
+                  어느 쪽이 딴 이름인지 구별이 안 된다. */}
+              {row.category_name || row.barcode || posSubtitle(row) ? (
                 <div className="text-ink-subtle flex flex-wrap gap-x-3 text-xs">
+                  {posSubtitle(row) ? <span>POS {posSubtitle(row)}</span> : null}
                   {row.category_name ? <span>{row.category_name}</span> : null}
                   {row.barcode ? <span data-numeric>{row.barcode}</span> : null}
                 </div>

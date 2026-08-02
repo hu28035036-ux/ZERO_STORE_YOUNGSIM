@@ -9,7 +9,7 @@ import { createClient } from '@/lib/supabase/server'
 import {
   LIST_LIMIT,
   likePattern,
-  nameSkuBarcodeFilter,
+  productSearchFilter,
   parseStockQuery,
   SORTS,
   type StockRow,
@@ -41,9 +41,10 @@ export default async function StockPage({
 
   const pattern = likePattern(query.q)
   if (pattern) {
-    // 상품명·SKU·바코드를 한 번에 훑는다. 계산대에서는 셋 중 무엇을 들고
-    // 찾을지 그때그때 다르다.
-    list = list.or(nameSkuBarcodeFilter(pattern))
+    // 상품명·POS 메뉴명·SKU·바코드를 한 번에 훑는다. 물건을 손에 들고 찾을 때
+    // 넷 중 무엇으로 찾을지는 그때그때 다르고, 매장 사람이 아는 이름은 발주명이
+    // 아니라 POS 메뉴명 쪽인 경우가 많다.
+    list = list.or(productSearchFilter(pattern))
   }
 
   list = list.order(SORTS[query.sort].column, { ascending: !query.desc })

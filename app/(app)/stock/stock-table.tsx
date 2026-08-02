@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/cn'
 import { formatWon } from '@/lib/constants'
 
-import { SORTS, sortHref, type SortKey, type StockQuery, type StockRow } from './query'
+import { posSubtitle, SORTS, sortHref, type SortKey, type StockQuery, type StockRow } from './query'
 
 /** 정렬 가능한 머리글 한 칸. 정렬은 서버가 하고 여기는 링크만 그린다. */
 function SortHead({
@@ -92,6 +92,14 @@ export function StockTable({
                 >
                   {row.product_name}
                 </Link>
+                {/* 열을 새로 늘리지 않고 이름 칸 둘째 줄로 넣는다. 표는
+                    min-w-[52rem] 로 이미 꽉 차 있어서 열이 하나 더 늘면
+                    좁은 노트북에서 가로 스크롤이 생긴다. */}
+                {posSubtitle(row) ? (
+                  <p className="text-ink-subtle mt-0.5 text-xs font-normal">
+                    POS {posSubtitle(row)}
+                  </p>
+                ) : null}
               </td>
               <td className="text-ink-muted px-3 py-2.5">{row.option_label ?? '—'}</td>
               <td className="text-ink-muted px-3 py-2.5">{row.category_name ?? '—'}</td>

@@ -1,9 +1,28 @@
 import type { Tables } from '@/lib/database.types'
 
 // 검색어 정제는 입출고·판매 화면도 그대로 쓴다. lib 에 두고 여기서는 다시 내보낸다.
-export { likePattern, nameSkuBarcodeFilter } from '@/lib/search'
+export { likePattern, productSearchFilter } from '@/lib/search'
 
 export type StockRow = Tables<'v_variant_stock'>
+
+/**
+ * 목록에 부제로 그릴 POS 메뉴명. 그릴 게 없으면 null.
+ *
+ * **표기만 다른 경우는 안 그린다.** 확정 매칭을 재보면 36% 는 괄호·띄어쓰기
+ * 차이뿐이라(`라라스윗 저당 카라멜 팝콘` ↔ `라라스윗) 저당 카라멜 팝콘`), 그것까지
+ * 다 그리면 목록이 두 배로 길어지면서 정작 진짜 다른 22%(브랜드가 바뀐 것들)가
+ * 파묻힌다. 목록의 부제는 "어, 이건 이름이 다르네" 를 눈에 띄게 하려고 있는 것이지
+ * 데이터를 다 보여주려고 있는 게 아니다. 전체 값은 상품 수정 화면에서 본다.
+ *
+ * 비교는 소문자·공백·괄호를 털어낸 뒤에 한다. 이 정규화는 검색이 아니라
+ * "사람이 보기에 같은 이름인가" 판정 전용이다.
+ */
+export function posSubtitle(row: Pick<StockRow, 'product_name' | 'pos_name'>): string | null {
+  const pos = row.pos_name?.trim()
+  if (!pos) return null
+  const flatten = (s: string) => s.toLowerCase().replace(/[\s()[\]]/g, '')
+  return flatten(pos) === flatten(row.product_name ?? '') ? null : pos
+}
 
 export const FILTERS = ['all', 'low', 'negative'] as const
 export type StockFilter = (typeof FILTERS)[number]

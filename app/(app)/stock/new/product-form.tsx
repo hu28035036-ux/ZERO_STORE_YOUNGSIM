@@ -86,6 +86,7 @@ export function ProductForm({
   const [channel, setChannel] = useState('')
   const [unit, setUnit] = useState('개')
   const [purchaseUnitName, setPurchaseUnitName] = useState('')
+  const [posName, setPosName] = useState('')
   const [description, setDescription] = useState('')
   // 켜면 판매가·원가·기초수량 칸이 "박스당 값"이 된다. 저장 직전에 낱개로
   // 환산하므로 서버 계약은 그대로다 — 입수(≥2)가 있는 줄에만 적용된다.
@@ -137,6 +138,7 @@ export function ProductForm({
         channel: channel.trim() || null,
         unit: unit.trim() || '개',
         purchaseUnitName: purchaseUnitName.trim() || null,
+        posName: posName.trim() || null,
         description: description.trim() || null,
         optionSchema: parsedAxes,
         variants: combos.map((options) => {
@@ -154,7 +156,7 @@ export function ProductForm({
           }
         }),
       }),
-    [name, categoryId, channel, unit, purchaseUnitName, description, boxMode, parsedAxes, combos, axisNames, drafts, emptyDraft],
+    [name, categoryId, channel, unit, purchaseUnitName, posName, description, boxMode, parsedAxes, combos, axisNames, drafts, emptyDraft],
   )
 
   // 이름만 쓰고 값을 안 넣었거나 그 반대인 축은 조용히 무시된다.
@@ -239,6 +241,16 @@ export function ProductForm({
               <option key={c} value={c} />
             ))}
           </datalist>
+          {/* 매장 POS 가 발주 시트와 다른 이름을 쓰는 상품이 22% 다. 여기 채우면
+              재고 검색이 두 이름을 다 훑는다 — 안 채우면 발주명으로만 찾힌다. */}
+          <Input
+            label="POS 메뉴명"
+            value={posName}
+            onChange={(e) => setPosName(e.target.value)}
+            placeholder="예: 라라스윗) 저당 카라멜 팝콘"
+            maxLength={120}
+            hint="매장 POS 에 등록된 이름. 발주 시트와 다를 때만 채우면 됩니다"
+          />
           <div className="grid grid-cols-2 gap-3">
             {/* 여기도 datalist — 단위는 정해진 목록이 아니라 자유 입력이고,
                 추천은 고르기 편하라고만 있다. DB 에는 친 글자 그대로 간다. */}

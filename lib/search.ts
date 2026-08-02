@@ -15,7 +15,21 @@ export function likePattern(raw: string): string {
   return cleaned ? `%${cleaned}%` : ''
 }
 
-/** 상품명 · SKU · 바코드를 한 번에 훑는 or() 조건. 재고 · 입출고 · 판매가 같이 쓴다. */
-export function nameSkuBarcodeFilter(pattern: string): string {
-  return `product_name.ilike.${pattern},sku.ilike.${pattern},barcode.ilike.${pattern}`
+/**
+ * 상품명 · POS 메뉴명 · SKU · 바코드를 한 번에 훑는 or() 조건.
+ * 재고 · 입출고 · 판매 적기 · 판매 임포트가 같이 쓴다.
+ *
+ * pos_name 이 여기 있는 것이 요점이다. 본사 발주명과 매장 POS 메뉴명이
+ * 실질적으로 다른 상품이 22% 나 되고(브랜드가 바뀐 것도 있다 — 킬로리
+ * 얌얌쉐이크 ↔ 데일리얌), 매장 사람이 아는 이름은 POS 쪽이다. 이 줄이 없으면
+ * pos_name 은 저장만 되고 검색으로는 영영 안 걸린다.
+ *
+ * 네 곳 모두 v_variant_stock 을 조회한다는 것이 전제다. 다른 뷰(v_movements
+ * 등)에 이 조건을 쓰면 없는 열이라 400 이 난다.
+ */
+export function productSearchFilter(pattern: string): string {
+  return (
+    `product_name.ilike.${pattern},pos_name.ilike.${pattern},` +
+    `sku.ilike.${pattern},barcode.ilike.${pattern}`
+  )
 }

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 import { requireUser } from '@/lib/auth'
+import { chunks, chunksByEncodedLength } from '@/lib/chunks'
 import { createClient } from '@/lib/supabase/server'
 
 /**
@@ -36,37 +37,6 @@ const dupSchema = z
     }),
   )
   .max(2_000)
-
-/** PostgREST in() 은 URL 로 나간다. 200개씩 끊지 않으면 URL 길이에서 터진다. */
-function chunks<T>(list: T[], size = 200): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size))
-  return out
-}
-
-/**
- * 개수가 아니라 인코딩된 길이로 끊는다. 한글은 percent 인코딩에서 글자당
- * 9바이트가 되어, 한글 상품명 200개면 URL 이 3만 자를 넘겨 요청 자체가
- * 실패한다 — 그런데 { data } 만 받으면 실패가 "일치 없음"으로 조용히
- * 둔갑한다. 실제로 이 화면의 이름 중복 감지가 그렇게 통째로 죽어 있었다.
- */
-function chunksByEncodedLength(list: string[], budget = 6_000): string[][] {
-  const out: string[][] = []
-  let cur: string[] = []
-  let len = 0
-  for (const v of list) {
-    const cost = encodeURIComponent(v).length + 3 // 따옴표·쉼표 몫
-    if (cur.length > 0 && len + cost > budget) {
-      out.push(cur)
-      cur = []
-      len = 0
-    }
-    cur.push(v)
-    len += cost
-  }
-  if (cur.length > 0) out.push(cur)
-  return out
-}
 
 export async function resolveProductRows(raw: DupQuery[]): Promise<DupResult[]> {
   await requireUser()

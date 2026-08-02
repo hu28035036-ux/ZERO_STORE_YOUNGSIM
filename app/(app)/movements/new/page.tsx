@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { Boxes, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
 import { StockBadge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { formatWon } from '@/lib/constants'
-import { likePattern, nameSkuBarcodeFilter } from '@/lib/search'
+import { likePattern, productSearchFilter } from '@/lib/search'
 import { createClient } from '@/lib/supabase/server'
 
 import { MovementForm, type SupplierOption, type VariantTarget } from './movement-form'
@@ -41,7 +41,7 @@ export default async function NewMovementPage({
   } else {
     const pattern = likePattern(q)
     // 검색어가 없으면 최근에 손댄 것부터 몇 개 보여준다. 빈 화면보다 낫다.
-    if (pattern) lookup = lookup.or(nameSkuBarcodeFilter(pattern))
+    if (pattern) lookup = lookup.or(productSearchFilter(pattern))
   }
 
   const [found, suppliers] = await Promise.all([
@@ -95,6 +95,25 @@ export default async function NewMovementPage({
         />
       ) : (
         <>
+          {/* 한 박스에 여러 맛이 섞여 오는 상품은 여기서 한 줄씩 넣으면 열 번을
+              반복해야 한다. 그 경로가 따로 있다는 것을 이 자리에서 알려준다 —
+              찾기 칸을 지나친 뒤에는 다시 안 올라온다. */}
+          <Link
+            href="/kits"
+            className="border-border-base hover:border-border-strong hover:bg-surface-sunken flex items-center gap-3 rounded-card border p-4 transition-colors"
+          >
+            <Boxes className="text-ink-muted h-5 w-5 shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="text-ink block text-sm font-medium">
+                한 박스에 여러 맛이 섞여 왔나요?
+              </span>
+              <span className="text-ink-subtle block text-xs">
+                곤약젤리 버라이어티팩처럼 섞여 오는 상품은 박스 묶음으로 한 번에 넣습니다
+              </span>
+            </span>
+            <ChevronRight className="text-ink-subtle h-4 w-4 shrink-0" aria-hidden />
+          </Link>
+
           <Card className="p-4">
             <form action="/movements/new" className="flex gap-2">
               {/* min-w-0: 버튼이 두 개(찾기 + 카메라)로 늘면서 flex 기본 최소폭이

@@ -38,6 +38,7 @@ export function EditProductForm({
   initialChannel,
   initialUnit,
   initialPurchaseUnitName,
+  initialPosName,
   initialDescription,
   categories,
   channels,
@@ -49,6 +50,7 @@ export function EditProductForm({
   initialChannel: string
   initialUnit: string
   initialPurchaseUnitName: string
+  initialPosName: string
   initialDescription: string
   categories: CategoryOption[]
   /** 기존 상품들이 쓰는 유통방식 값 — datalist 로 제안만 하고 새 값도 받는다 */
@@ -65,6 +67,7 @@ export function EditProductForm({
   const [channel, setChannel] = useState(initialChannel)
   const [unit, setUnit] = useState(initialUnit)
   const [purchaseUnitName, setPurchaseUnitName] = useState(initialPurchaseUnitName)
+  const [posName, setPosName] = useState(initialPosName)
   const [description, setDescription] = useState(initialDescription)
   const [variants, setVariants] = useState<EditVariant[]>(initialVariants)
   // 환산 도우미는 한 번만. 두 번 누르면 두 번 나뉜다 — 값이 이미 낱개인데
@@ -118,6 +121,9 @@ export function EditProductForm({
         channel: channel.trim() || null,
         unit: unit.trim() || '개',
         purchaseUnitName: purchaseUnitName.trim() || null,
+        // || null 을 쓰지 않는다. 빈 문자열이 "POS 메뉴명을 지워달라"라는 뜻이고,
+        // null 로 보내면 RPC 가 "안 보냈다 = 그대로 둬라"로 읽는다.
+        posName: posName.trim(),
         description: description.trim() || null,
         variants: variants.map((v) => ({
           variantId: v.variantId,
@@ -131,7 +137,17 @@ export function EditProductForm({
           barcode: v.barcode.trim() || null,
         })),
       }),
-    [productId, name, categoryId, channel, unit, purchaseUnitName, description, variants],
+    [
+      productId,
+      name,
+      categoryId,
+      channel,
+      unit,
+      purchaseUnitName,
+      posName,
+      description,
+      variants,
+    ],
   )
 
   return (
@@ -171,6 +187,18 @@ export function EditProductForm({
               <option key={c} value={c} />
             ))}
           </datalist>
+          {/* 매장 POS 의 메뉴명. 발주 시트 이름과 실질적으로 다른 상품이 22% 라
+              (브랜드가 바뀐 것도 있다 — 킬로리 얌얌쉐이크 ↔ 데일리얌) 한쪽만
+              저장하면 발주할 때와 매장에서 찾을 때 서로 다른 말을 쓰게 된다.
+              여기 채우면 재고 검색이 이 이름으로도 걸린다. */}
+          <Input
+            label="POS 메뉴명"
+            value={posName}
+            onChange={(e) => setPosName(e.target.value)}
+            placeholder="예: 라라스윗) 저당 카라멜 팝콘"
+            maxLength={120}
+            hint="매장 POS 에 등록된 이름. 발주 시트와 다를 때만 채우면 됩니다"
+          />
           <div className="grid grid-cols-2 gap-3">
             {/* 단위도 datalist — 자유 입력이고 추천은 고르기 편하라고만 있다. */}
             <Input
