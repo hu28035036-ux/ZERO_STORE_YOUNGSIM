@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { StockBadge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { formatWon } from '@/lib/constants'
-import { likePattern, nameSkuBarcodeFilter } from '@/lib/search'
+import { likePattern, productSearchFilter } from '@/lib/search'
 import { createClient } from '@/lib/supabase/server'
 
 import { MovementForm, type SupplierOption, type VariantTarget } from './movement-form'
@@ -41,7 +41,7 @@ export default async function NewMovementPage({
   } else {
     const pattern = likePattern(q)
     // 검색어가 없으면 최근에 손댄 것부터 몇 개 보여준다. 빈 화면보다 낫다.
-    if (pattern) lookup = lookup.or(nameSkuBarcodeFilter(pattern))
+    if (pattern) lookup = lookup.or(productSearchFilter(pattern))
   }
 
   const [found, suppliers] = await Promise.all([

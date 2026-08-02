@@ -7,8 +7,9 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 import { requireUser } from '@/lib/auth'
+import { chunks, chunksByEncodedLength } from '@/lib/chunks'
 import { todayInSeoul } from '@/lib/constants'
-import { likePattern, nameSkuBarcodeFilter } from '@/lib/search'
+import { likePattern, productSearchFilter } from '@/lib/search'
 import { createClient } from '@/lib/supabase/server'
 
 import type { FoundItem } from '../actions'
@@ -46,16 +47,10 @@ const matchSchema = z
   )
   .max(2_000)
 
-/** PostgREST in() 은 URL 로 나간다. 200개씩 끊지 않으면 URL 길이에서 터진다. */
-function chunks<T>(list: T[], size = 200): T[][] {
-  const out: T[][] = []
-  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size))
-  return out
-}
-
 type VariantRow = {
   variant_id: string | null
   product_name: string | null
+  pos_name: string | null
   option_label: string | null
   sale_price: number | null
   cost_price: number | null
@@ -78,12 +73,18 @@ function toFound(r: VariantRow): FoundItem {
 }
 
 const VARIANT_COLS =
-  'variant_id, product_name, option_label, sale_price, cost_price, stock_qty, barcode, unit'
+  'variant_id, product_name, pos_name, option_label, sale_price, cost_price, stock_qty, barcode, unit'
 
 /**
  * 파일의 각 줄을 상품(변형)에 잇는다. 바코드 정확 일치 → 상품명 정확 일치 →
- * 유사 검색 순서다. N+1 을 만들지 않는다 — distinct 값들을 모아 왕복 몇 번으로
- * 끝낸다. 수백 줄 파일이 줄마다 조회하면 그 수만큼 왕복이 생긴다.
+ * POS 메뉴명 정확 일치 → 유사 검색 순서다. N+1 을 만들지 않는다 — distinct
+ * 값들을 모아 왕복 몇 번으로 끝낸다. 수백 줄 파일이 줄마다 조회하면 그 수만큼
+ * 왕복이 생긴다.
+ *
+ * **조회 실패를 전부 throw 한다.** 예전에는 `{ data }` 만 받고 `?? []` 로
+ * 넘겼는데, 그러면 요청이 실패해도 화면에는 "등록된 상품에서 찾지 못했습니다"
+ * 로만 보인다 — 파일이 멀쩡한데 전부 못 찾은 것처럼 나오고, 사람이 원인을
+ * 알아낼 방법이 없다. 미리보기(preview.tsx)가 이 예외를 잡아 문구를 띄운다.
  */
 export async function resolveSaleRows(raw: MatchQuery[]): Promise<ResolvedRow[]> {
   await requireUser()
@@ -97,18 +98,22 @@ export async function resolveSaleRows(raw: MatchQuery[]): Promise<ResolvedRow[]>
   const supabase = await createClient()
 
   // 1) 바코드 정확 일치. barcodes 는 부바코드까지 갖고 있어서 v_variant_stock
-  //    의 대표 바코드 한 줄로는 못 찾는 코드도 여기서는 잡힌다.
+  //    의 대표 바코드 한 줄로는 못 찾는 코드도 여기서는 잡힌다. POS 의 EAN-13
+  //    과 메뉴코드도 여기 부바코드로 들어가 있어서 이 단계에서 붙는다.
   const codes = [...new Set(rows.map((r) => r.barcode).filter((v): v is string => !!v))]
   const codeToVariant = new Map<string, string>()
   for (const part of chunks(codes)) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('barcodes')
       .select('code, variant_id')
       .in('code', part)
+    if (error) throw new Error('바코드 조회에 실패했습니다: ' + error.message)
     for (const b of data ?? []) codeToVariant.set(b.code, b.variant_id)
   }
 
   // 2) 이름 정확 일치 후보. 바코드로 못 찾은 줄만 대상이다.
+  //    한글 상품명이므로 개수가 아니라 URL 인코딩 길이로 끊는다 — 개수 기준
+  //    200개면 percent 인코딩으로 URL 이 3만 자를 넘어 요청이 통째로 실패한다.
   const names = [
     ...new Set(
       rows
@@ -118,13 +123,14 @@ export async function resolveSaleRows(raw: MatchQuery[]): Promise<ResolvedRow[]>
     ),
   ]
   const nameToVariants = new Map<string, VariantRow[]>()
-  for (const part of chunks(names)) {
-    const { data } = await supabase
+  for (const part of chunksByEncodedLength(names)) {
+    const { data, error } = await supabase
       .from('v_variant_stock')
       .select(VARIANT_COLS)
       .eq('is_active', true)
       .eq('product_active', true)
       .in('product_name', part)
+    if (error) throw new Error('상품명 조회에 실패했습니다: ' + error.message)
     for (const v of data ?? []) {
       const key = v.product_name ?? ''
       const list = nameToVariants.get(key) ?? []
@@ -133,14 +139,47 @@ export async function resolveSaleRows(raw: MatchQuery[]): Promise<ResolvedRow[]>
     }
   }
 
+  // 2-b) 상품명으로도 못 찾은 이름만 POS 메뉴명으로 한 번 더 본다.
+  //      POS 파일의 메뉴명은 발주명과 표기가 다르다 — `라라스윗) 저당 카라멜
+  //      팝콘` 처럼 괄호 하나로 어긋나거나, 브랜드가 아예 다르다.
+  //
+  //      이 단계가 유사 검색보다 **앞**이어야 한다. 유사 검색은 상한이 30건이라,
+  //      정확 일치로 풀 수 있는 것을 거기까지 흘리면 예산을 다 쓴다.
+  //
+  //      기존 in('product_name') 과 or 로 합치지 않는다. PostgREST 에서 in 과
+  //      or 를 섞으면 URL 이 더 길어지는데, 이 함수가 바로 그 길이 때문에
+  //      조용히 죽었던 곳이다. 순서대로 두 번 조회하는 편이 안전하다.
+  const posNameToVariants = new Map<string, VariantRow[]>()
+  const unresolvedNames = names.filter((n) => !nameToVariants.has(n))
+  for (const part of chunksByEncodedLength(unresolvedNames)) {
+    const { data, error } = await supabase
+      .from('v_variant_stock')
+      .select(VARIANT_COLS)
+      .eq('is_active', true)
+      .eq('product_active', true)
+      .in('pos_name', part)
+    if (error) throw new Error('POS 메뉴명 조회에 실패했습니다: ' + error.message)
+    for (const v of data ?? []) {
+      const key = v.pos_name ?? ''
+      const list = posNameToVariants.get(key) ?? []
+      list.push(v)
+      posNameToVariants.set(key, list)
+    }
+  }
+
   // 바코드로 찾은 변형들의 정보도 v_variant_stock 에서 한 번에 가져온다.
+  // is_active·product_active 를 여기서도 건다 — 이름 경로에만 걸어 두면
+  // 숨긴 상품이 바코드로는 통과해서 그 재고가 임포트로 깎인다.
   const idToVariant = new Map<string, VariantRow>()
   const variantIds = [...new Set(codeToVariant.values())]
   for (const part of chunks(variantIds)) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('v_variant_stock')
       .select(VARIANT_COLS)
+      .eq('is_active', true)
+      .eq('product_active', true)
       .in('variant_id', part)
+    if (error) throw new Error('상품 정보 조회에 실패했습니다: ' + error.message)
     for (const v of data ?? []) idToVariant.set(v.variant_id!, v)
   }
 
@@ -152,17 +191,23 @@ export async function resolveSaleRows(raw: MatchQuery[]): Promise<ResolvedRow[]>
 
   async function fuzzy(name: string): Promise<VariantRow[]> {
     if (fuzzyCache.has(name)) return fuzzyCache.get(name)!
+    // 패턴 검사가 예산 차감보다 먼저다. 쿼리도 안 나가는 이름(쉼표만 있다든가)
+    // 에 예산을 쓰면, 정작 조회가 필요한 줄이 상한에 걸려 후보 없이 나온다.
+    const pattern = likePattern(name)
+    if (!pattern) {
+      fuzzyCache.set(name, [])
+      return []
+    }
     if (fuzzyBudget <= 0) return []
     fuzzyBudget -= 1
-    const pattern = likePattern(name)
-    if (!pattern) return []
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('v_variant_stock')
       .select(VARIANT_COLS)
       .eq('is_active', true)
       .eq('product_active', true)
-      .or(nameSkuBarcodeFilter(pattern))
+      .or(productSearchFilter(pattern))
       .limit(6)
+    if (error) throw new Error('비슷한 상품 검색에 실패했습니다: ' + error.message)
     const list = data ?? []
     fuzzyCache.set(name, list)
     return list
@@ -181,7 +226,9 @@ export async function resolveSaleRows(raw: MatchQuery[]): Promise<ResolvedRow[]>
     }
 
     if (row.name) {
-      const exact = nameToVariants.get(row.name) ?? []
+      // 상품명으로 못 찾으면 POS 메뉴명으로 본다. 둘 다 정확 일치라 우열이
+      // 없지만, 발주명이 이 앱의 대표 이름이므로 그쪽을 먼저 믿는다.
+      const exact = nameToVariants.get(row.name) ?? posNameToVariants.get(row.name) ?? []
       if (exact.length === 1) {
         out.push({ status: 'ok', item: toFound(exact[0]) })
         continue

@@ -6,7 +6,7 @@ import { z } from 'zod'
 
 import { requireUser } from '@/lib/auth'
 import { todayInSeoul } from '@/lib/constants'
-import { likePattern, nameSkuBarcodeFilter } from '@/lib/search'
+import { likePattern, productSearchFilter } from '@/lib/search'
 import { createClient } from '@/lib/supabase/server'
 
 export type FoundItem = {
@@ -62,7 +62,7 @@ export async function findItems(rawQuery: string): Promise<FoundItem[]> {
     .select('*')
     .eq('is_active', true)
     .eq('product_active', true)
-    .or(nameSkuBarcodeFilter(pattern))
+    .or(productSearchFilter(pattern))
     .order('product_name')
     .order('option_label', { nullsFirst: true })
     .limit(SEARCH_LIMIT)

@@ -154,6 +154,7 @@ export type Database = {
           is_active: boolean
           name: string
           option_schema: Json
+          pos_name: string | null
           purchase_unit_name: string | null
           unit: string
           updated_at: string
@@ -170,6 +171,7 @@ export type Database = {
           is_active?: boolean
           name: string
           option_schema?: Json
+          pos_name?: string | null
           purchase_unit_name?: string | null
           unit?: string
           updated_at?: string
@@ -186,6 +188,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           option_schema?: Json
+          pos_name?: string | null
           purchase_unit_name?: string | null
           unit?: string
           updated_at?: string
@@ -525,6 +528,7 @@ export type Database = {
           margin_rate: number | null
           option_label: string | null
           options: Json | null
+          pos_name: string | null
           product_active: boolean | null
           product_id: string | null
           product_name: string | null
@@ -661,6 +665,7 @@ export type Database = {
           margin_rate: number | null
           option_label: string | null
           options: Json | null
+          pos_name: string | null
           product_active: boolean | null
           product_id: string | null
           product_name: string | null
@@ -686,6 +691,7 @@ export type Database = {
           p_description?: string
           p_name: string
           p_option_schema?: Json
+          p_pos_name?: string
           p_purchase_unit_name?: string
           p_unit?: string
           p_variants?: Json
@@ -814,6 +820,7 @@ export type Database = {
           p_channel?: string
           p_description?: string
           p_name: string
+          p_pos_name?: string
           p_product_id: string
           p_purchase_unit_name?: string
           p_unit?: string

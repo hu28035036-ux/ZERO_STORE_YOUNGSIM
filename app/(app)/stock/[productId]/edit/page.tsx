@@ -22,7 +22,7 @@ export default async function EditProductPage({
   const [product, rows, categories, channelRows] = await Promise.all([
     supabase
       .from('products')
-      .select('id, name, category_id, channel, unit, purchase_unit_name, description')
+      .select('id, name, category_id, channel, unit, purchase_unit_name, pos_name, description')
       .eq('id', productId)
       .maybeSingle(),
     // 변형 값과 재고·원가를 한 번에 받으려고 뷰를 쓴다. 옵션 라벨도 뷰가 만든다.
@@ -103,6 +103,7 @@ export default async function EditProductPage({
         initialChannel={product.data.channel ?? ''}
         initialUnit={product.data.unit ?? '개'}
         initialPurchaseUnitName={product.data.purchase_unit_name ?? ''}
+        initialPosName={product.data.pos_name ?? ''}
         initialDescription={product.data.description ?? ''}
         categories={options}
         channels={channels}

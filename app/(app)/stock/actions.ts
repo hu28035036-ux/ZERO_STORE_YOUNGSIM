@@ -46,6 +46,9 @@ const payloadSchema = z.object({
   purchaseUnitName: z.string().trim().min(1).max(10, {
     error: '묶음 이름은 10자까지입니다',
   }).nullable(),
+  // 상한은 name 과 같은 120자다. POS 메뉴명은 브랜드 접두사(`라라스윗) `)가
+  // 붙어서 발주명보다 긴 경우가 흔하다.
+  posName: z.string().trim().max(120).nullable(),
   // 축이 3개를 넘으면 조합이 폭발하고 휴대폰에서 표가 무너진다.
   optionSchema: z.array(axisSchema).max(3),
   variants: z
@@ -100,7 +103,7 @@ export async function createProduct(
   if (!parsed.success) {
     return { error: parsed.error.issues[0].message }
   }
-  const { name, categoryId, channel, description, unit, purchaseUnitName, optionSchema, variants } =
+  const { name, categoryId, channel, description, unit, purchaseUnitName, posName, optionSchema, variants } =
     parsed.data
 
   // 선언한 축과 변형의 옵션 키가 정확히 일치해야 한다.
@@ -133,6 +136,7 @@ export async function createProduct(
     p_description: description ?? undefined,
     p_unit: unit,
     p_purchase_unit_name: purchaseUnitName ?? undefined,
+    p_pos_name: posName ?? undefined,
     p_option_schema: optionSchema,
     p_variants: variants.map((v) => ({
       ...v,
@@ -233,6 +237,9 @@ const editPayloadSchema = z.object({
   purchaseUnitName: z.string().trim().min(1).max(10, {
     error: '묶음 이름은 10자까지입니다',
   }).nullable(),
+  // 상한은 name 과 같은 120자다. POS 메뉴명은 브랜드 접두사(`라라스윗) `)가
+  // 붙어서 발주명보다 긴 경우가 흔하다.
+  posName: z.string().trim().max(120).nullable(),
   variants: z.array(editVariantSchema).max(200),
 })
 
@@ -255,7 +262,7 @@ export async function updateProduct(
   const parsed = editPayloadSchema.safeParse(json)
   if (!parsed.success) return fail(parsed.error.issues[0].message)
 
-  const { productId, name, categoryId, channel, description, unit, purchaseUnitName, variants } =
+  const { productId, name, categoryId, channel, description, unit, purchaseUnitName, posName, variants } =
     parsed.data
 
   // 폼 안에서 바코드가 겹치는 경우. DB 도 막지만 어느 값인지 알려주려면
@@ -273,6 +280,7 @@ export async function updateProduct(
     p_description: description ?? undefined,
     p_unit: unit,
     p_purchase_unit_name: purchaseUnitName ?? undefined,
+    p_pos_name: posName ?? undefined,
     p_variants: variants.map((v) => ({
       variant_id: v.variantId,
       sale_price: v.salePrice,
