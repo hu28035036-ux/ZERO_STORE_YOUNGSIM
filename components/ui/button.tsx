@@ -28,6 +28,29 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   full?: boolean
 }
 
+/**
+ * 버튼과 똑같이 생겨야 하는 <Link> 를 위한 클래스.
+ *
+ * Button 에 `as` prop 을 받게 고치는 쪽은 택하지 않았다. 그러면 이 컴포넌트가
+ * 버튼이면서 링크인 두 얼굴을 갖게 되고, type='button' 기본값 같은 버튼 전용
+ * 방어가 링크에도 딸려 온다. 모양만 필요하면 모양만 가져가면 된다.
+ */
+export function buttonClass(
+  variant: Variant = 'primary',
+  size: Size = 'md',
+  full = false,
+  className?: string,
+) {
+  return cn(
+    'inline-flex items-center justify-center rounded-lg font-medium',
+    'transition-colors select-none',
+    VARIANT[variant],
+    SIZE[size],
+    full && 'w-full',
+    className,
+  )
+}
+
 export function Button({
   variant = 'primary',
   size = 'md',

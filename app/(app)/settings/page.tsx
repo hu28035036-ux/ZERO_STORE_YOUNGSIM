@@ -1,5 +1,8 @@
 import { ActionForm } from '@/components/ui/action-form'
 import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
+
+import { buttonClass } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input, NumberInput, Select } from '@/components/ui/field'
 import { getSessionUser } from '@/lib/auth'
@@ -81,6 +84,25 @@ export default async function SettingsPage() {
               hint="입출고 내역의 “처리” 칸에 이 이름이 나옵니다."
             />
           </ActionForm>
+        </CardBody>
+      </Card>
+
+      {/* 박스 묶음은 설정이 아니라 물건이지만, 자주 손대는 것이 아니라
+          입출고 화면에 상시로 두면 그 화면의 초점이 흐려진다. 관리는 여기,
+          쓰는 것은 입출고 화면의 안내에서 들어간다. */}
+      <Card>
+        <CardHeader>
+          <CardTitle>박스 묶음</CardTitle>
+          <span className="text-ink-muted text-xs">한 박스에 여러 맛이 섞여 오는 상품</span>
+        </CardHeader>
+        <CardBody className="flex flex-col gap-3">
+          <p className="text-ink-muted text-sm">
+            곤약젤리 버라이어티팩처럼 한 박스에 여러 종류가 든 상품을 등록해 두면,
+            입고할 때 종류별로 펼쳐서 개수만 확인하면 됩니다. 재고는 종류별로 따로 셉니다.
+          </p>
+          <Link href="/kits" className={buttonClass('secondary', 'md', false, 'self-start')}>
+            박스 묶음 관리
+          </Link>
         </CardBody>
       </Card>
 

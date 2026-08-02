@@ -141,6 +141,72 @@ export type Database = {
           },
         ]
       }
+      kit_items: {
+        Row: {
+          default_qty: number
+          kit_id: string
+          sort_order: number
+          variant_id: string
+        }
+        Insert: {
+          default_qty: number
+          kit_id: string
+          sort_order?: number
+          variant_id: string
+        }
+        Update: {
+          default_qty?: number
+          kit_id?: string
+          sort_order?: number
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kit_items_kit_id_fkey"
+            columns: ["kit_id"]
+            isOneToOne: false
+            referencedRelation: "kits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kit_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kits: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category_id: string | null
@@ -514,6 +580,37 @@ export type Database = {
         }
         Relationships: []
       }
+      v_kit_items: {
+        Row: {
+          cost_price: number | null
+          default_qty: number | null
+          kit_id: string | null
+          option_label: string | null
+          pos_name: string | null
+          product_active: boolean | null
+          product_id: string | null
+          product_name: string | null
+          sale_price: number | null
+          sort_order: number | null
+          stock_qty: number | null
+          unit: string | null
+          variant_active: boolean | null
+          variant_id: string | null
+        }
+        Relationships: []
+      }
+      v_kits: {
+        Row: {
+          default_total_qty: number | null
+          is_active: boolean | null
+          item_count: number | null
+          kit_id: string | null
+          name: string | null
+          note: string | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
       v_low_stock: {
         Row: {
           barcode: string | null
@@ -735,6 +832,24 @@ export type Database = {
         }[]
       }
       recalc_stock: { Args: { p_variant_id?: string }; Returns: number }
+      receive_kit: {
+        Args: {
+          p_box_cost?: number
+          p_boxes?: number
+          p_kit_id: string
+          p_lines: Json
+          p_note?: string
+          p_occurred_at?: string
+          p_supplier_id?: string
+        }
+        Returns: {
+          product_name: string
+          qty: number
+          stock_after: number
+          unit_cost: number
+          variant_id: string
+        }[]
+      }
       record_sale: {
         Args: { p_items: Json; p_memo?: string; p_occurred_at?: string }
         Returns: string
@@ -827,6 +942,15 @@ export type Database = {
           p_variants?: Json
         }
         Returns: undefined
+      }
+      upsert_kit: {
+        Args: {
+          p_items?: Json
+          p_kit_id: string | null
+          p_name: string
+          p_note?: string
+        }
+        Returns: string
       }
       void_import_batch: {
         Args: { p_batch_id: string; p_reason?: string }
