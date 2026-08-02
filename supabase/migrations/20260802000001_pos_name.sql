@@ -239,9 +239,15 @@ begin
          -- 언제나 현재 상태 전체를 보내므로, 안 보내면 지우는 것으로 동작한다.
          unit               = coalesce(nullif(btrim(coalesce(p_unit, '')), ''), unit),
          purchase_unit_name = nullif(btrim(coalesce(p_purchase_unit_name, '')), ''),
-         -- pos_name 도 channel 과 같은 규칙이다. 폼에 POS 메뉴명 칸이 있고
-         -- 늘 현재 값을 실어 보내므로, 빈 값이 오면 지우는 것이 맞다.
-         pos_name           = nullif(btrim(coalesce(p_pos_name, '')), '')
+         -- channel 과 달리 NULL 과 빈 문자열을 구분한다.
+         --   NULL(=인자를 안 보냄) → 현재 값 유지
+         --   빈 문자열·공백        → NULL 로 지움
+         -- channel 규칙("폼이 늘 현재 값을 보내니 빈 값은 지운다")을 그대로 쓰면
+         -- 컬럼이 생긴 직후가 위험하다. 배포된 옛 앱은 이 인자를 모르니 안 보내고,
+         -- 그러면 방금 채워 넣은 값이 상품 수정 저장 한 번에 전부 지워진다.
+         -- 실제로 298건을 채운 뒤 이 구멍을 발견했다.
+         pos_name    = case when p_pos_name is null then pos_name
+                            else nullif(btrim(p_pos_name), '') end
    where id = p_product_id;
 
   get diagnostics v_rows = row_count;
@@ -316,7 +322,7 @@ begin
 end $$;
 
 comment on function public.update_product(uuid, text, uuid, text, jsonb, text, text, text, text) is
-  '상품 기본 정보(POS 메뉴명·단위·묶음 이름 포함)와 변형별 판매가·원가·수량(실사)·최소재고·입수·대표 바코드를 한 트랜잭션에 저장';
+  '상품 기본 정보(POS 메뉴명·단위·묶음 이름 포함)와 변형별 판매가·원가·수량(실사)·최소재고·입수·대표 바코드를 한 트랜잭션에 저장. pos_name 은 NULL=유지 / 빈문자열=지움';
 
 -- import_products 는 시그니처가 안 바뀌므로 or replace 로 족하다. create_product
 -- 를 부르기만 하는 함수라 pos_name 도 그 인자로 넘기는 한 줄이면 끝난다 —

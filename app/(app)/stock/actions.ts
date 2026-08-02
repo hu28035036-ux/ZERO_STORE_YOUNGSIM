@@ -239,7 +239,11 @@ const editPayloadSchema = z.object({
   }).nullable(),
   // 상한은 name 과 같은 120자다. POS 메뉴명은 브랜드 접두사(`라라스윗) `)가
   // 붙어서 발주명보다 긴 경우가 흔하다.
-  posName: z.string().trim().max(120).nullable(),
+  //
+  // 다른 칸과 달리 nullable 이 아니라 **언제나 문자열**이다. RPC 가 pos_name 만
+  // NULL(=안 보냄, 현재 값 유지)과 빈 문자열(=지움)을 구분하기 때문이다.
+  // null 로 보내면 "지워달라"가 "그대로 둬라"로 읽혀서 칸을 비워도 안 지워진다.
+  posName: z.string().trim().max(120),
   variants: z.array(editVariantSchema).max(200),
 })
 
@@ -280,7 +284,8 @@ export async function updateProduct(
     p_description: description ?? undefined,
     p_unit: unit,
     p_purchase_unit_name: purchaseUnitName ?? undefined,
-    p_pos_name: posName ?? undefined,
+    // ?? undefined 를 쓰지 않는다 — 빈 문자열이 "지워달라"라는 뜻이라 그대로 보낸다.
+    p_pos_name: posName,
     p_variants: variants.map((v) => ({
       variant_id: v.variantId,
       sale_price: v.salePrice,

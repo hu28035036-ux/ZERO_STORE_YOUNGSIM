@@ -121,7 +121,9 @@ export function EditProductForm({
         channel: channel.trim() || null,
         unit: unit.trim() || '개',
         purchaseUnitName: purchaseUnitName.trim() || null,
-        posName: posName.trim() || null,
+        // || null 을 쓰지 않는다. 빈 문자열이 "POS 메뉴명을 지워달라"라는 뜻이고,
+        // null 로 보내면 RPC 가 "안 보냈다 = 그대로 둬라"로 읽는다.
+        posName: posName.trim(),
         description: description.trim() || null,
         variants: variants.map((v) => ({
           variantId: v.variantId,
