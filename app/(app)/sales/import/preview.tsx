@@ -12,7 +12,8 @@ import { formatQty, formatWon, todayInSeoul } from '@/lib/constants'
 import type { Device } from '@/lib/device'
 
 import type { FoundItem } from '../actions'
-import { saveMapping, type ColumnMap } from './columns'
+import type { MapSource } from './import-flow'
+import { COLUMN_LABEL, saveMapping, type ColumnKey, type ColumnMap } from './columns'
 import { cellToText, normalizeDate, toMoney, toQuantity, type Cell } from './parse'
 import {
   importSales,
@@ -84,17 +85,21 @@ function buildLines(rows: Cell[][], map: ColumnMap, today: string): ParsedLine[]
 export function ImportPreview({
   device,
   rows,
+  headers,
+  headerRow,
   map,
   signature,
-  remembered,
+  source,
   onChangeMapping,
   onRestart,
 }: {
   device: Device
   rows: Cell[][]
+  headers: string[]
+  headerRow: number
   map: ColumnMap
   signature: string
-  remembered: boolean
+  source: MapSource
   onChangeMapping: () => void
   onRestart: () => void
 }) {
@@ -300,20 +305,13 @@ export function ImportPreview({
 
   return (
     <div className="flex flex-col gap-4">
-      {remembered ? (
-        <p className="text-ink-muted text-sm">
-          지난번 열 지정을 그대로 썼습니다.{' '}
-          <button type="button" onClick={onChangeMapping} className="text-primary underline">
-            바꾸기
-          </button>
-        </p>
-      ) : (
-        <p className="text-ink-muted text-sm">
-          <button type="button" onClick={onChangeMapping} className="text-primary underline">
-            열 지정 바꾸기
-          </button>
-        </p>
-      )}
+      <ReadAs
+        headers={headers}
+        headerRow={headerRow}
+        map={map}
+        source={source}
+        onChangeMapping={onChangeMapping}
+      />
 
       {/* 요약 한 줄 — 확정 전에 사람이 확인하는 숫자들 */}
       <Card className="p-4">
@@ -391,6 +389,19 @@ export function ImportPreview({
           onSkip={(no) => {
             const line = lines.find((l) => l.no === no)
             if (line) setLineState(no, { kind: 'skipped', prev: line.state })
+          }}
+          onSkipAll={() => {
+            setLines((prev) =>
+              prev
+                ? prev.map((l) =>
+                    l.state.kind === 'ambiguous' ||
+                    l.state.kind === 'missing' ||
+                    l.state.kind === 'invalid'
+                      ? { ...l, state: { kind: 'skipped', prev: l.state } }
+                      : l,
+                  )
+                : prev,
+            )
           }}
         />
       ) : null}
@@ -487,6 +498,58 @@ export function ImportPreview({
 }
 
 /**
+ * "파일을 이렇게 읽었습니다" — 사람이 열을 맞추는 단계를 없앤 대신 생긴 확인 지점.
+ *
+ * 자동으로 찾았으니 **찾은 결과를 반드시 보여줘야 한다.** 열을 잘못 잡아도
+ * 숫자는 멀쩡해 보인다 — 수량 자리에 거래건수가 들어가면 재고가 조용히
+ * 틀리고, 할인 전 금액을 잡으면 매출이 부풀지만 화면 어디에도 티가 안 난다.
+ * 그래서 뜻마다 "파일의 어느 열에서 왔는지"를 이름 그대로 보여준다.
+ */
+function ReadAs({
+  headers,
+  headerRow,
+  map,
+  source,
+  onChangeMapping,
+}: {
+  headers: string[]
+  headerRow: number
+  map: ColumnMap
+  source: MapSource
+  onChangeMapping: () => void
+}) {
+  // 파일에 나온 열 순서대로 보여준다 — 사람이 파일과 눈으로 대조하기 쉽다.
+  const picked = (Object.entries(map) as [ColumnKey, number][]).sort((a, b) => a[1] - b[1])
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>파일을 이렇게 읽었습니다</CardTitle>
+        <button type="button" onClick={onChangeMapping} className="text-primary text-sm underline">
+          다르면 바꾸기
+        </button>
+      </CardHeader>
+      <CardBody className="flex flex-col gap-3">
+        <ul className="flex flex-wrap gap-x-4 gap-y-1.5">
+          {picked.map(([key, i]) => (
+            <li key={key} className="text-sm">
+              <span className="text-ink-muted">{COLUMN_LABEL[key]}</span>
+              <span className="text-ink-subtle mx-1">←</span>
+              <span className="text-ink font-medium">{headers[i] || `${i + 1}번째 열`}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="text-ink-subtle text-xs">
+          제목 줄은 {headerRow + 1}줄로 봤습니다
+          {source === 'remembered' ? ' · 지난번에 쓴 지정입니다' : null}
+          {source === 'manual' ? ' · 직접 지정하셨습니다' : null}
+        </p>
+      </CardBody>
+    </Card>
+  )
+}
+
+/**
  * 아직 상품에 못 이은 줄의 수량 단위. 상품이 정해지지 않아 단위도 모른다 —
  * 후보들이 전부 같은 단위면 그걸 쓰고, 아니면 '개' 로 둔다.
  */
@@ -503,15 +566,28 @@ function UnresolvedList({
   lines,
   onPick,
   onSkip,
+  onSkipAll,
 }: {
   lines: Line[]
   onPick: (no: number, item: FoundItem) => void
   onSkip: (no: number) => void
+  onSkipAll: () => void
 }) {
   return (
     <Card>
       <CardHeader>
         <CardTitle>확인 필요 {lines.length}줄</CardTitle>
+        {/*
+          한 줄씩 건너뛰기만 있으면 못 찾는 상품이 수십 개인 파일에서 확정
+          버튼이 영영 안 풀린다 (포스 매출현황 314줄 중 83줄이 미등록 상품이었다).
+          조용히 빼는 게 아니라 사람이 누르는 것이고, 요약에 "건너뜀 N" 이 남고
+          "모두 되살리기"로 돌아올 수 있어서 빼먹은 줄을 놓치지 않는다.
+        */}
+        {lines.length > 1 ? (
+          <Button variant="ghost" size="sm" onClick={onSkipAll}>
+            {lines.length}줄 모두 건너뛰기
+          </Button>
+        ) : null}
       </CardHeader>
       <CardBody className="flex flex-col gap-4">
         {lines.map((l) => (
@@ -581,10 +657,31 @@ function UnresolvedList({
                 {l.state.kind === 'missing' ? (
                   <p className="text-ink-muted text-sm">
                     새 상품이면{' '}
-                    <Link href="/stock/new" className="text-primary underline" target="_blank">
+                    {/*
+                      파일에 적힌 이름을 그대로 등록 화면의 POS 메뉴명 칸에
+                      실어 보낸다. 손으로 옮겨 적게 하면 괄호·띄어쓰기가
+                      한 글자만 달라져도 다음 임포트에서 또 못 찾는다 —
+                      이 이름은 사람이 읽는 이름이 아니라 매칭 열쇠다.
+                      새 탭으로 여는 이유는 지금 미리보기를 잃지 않기 위해서다.
+                    */}
+                    <Link
+                      href={
+                        l.name
+                          ? `/stock/new?posName=${encodeURIComponent(l.name)}`
+                          : '/stock/new'
+                      }
+                      className="text-primary underline"
+                      target="_blank"
+                    >
                       상품 등록
                     </Link>
                     을 먼저 하고, 등록한 뒤 파일을 다시 올리세요.
+                    {l.name ? (
+                      <span className="text-ink-subtle">
+                        {' '}
+                        POS 메뉴명은 채워서 엽니다.
+                      </span>
+                    ) : null}
                   </p>
                 ) : null}
               </>

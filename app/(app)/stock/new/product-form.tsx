@@ -70,11 +70,19 @@ export function ProductForm({
   categories,
   channels,
   defaultLowStock,
+  defaultPosName = '',
 }: {
   categories: CategoryOption[]
   /** 기존 상품들이 쓰는 유통방식 값 — datalist 로 제안만 하고 새 값도 받는다 */
   channels: string[]
   defaultLowStock: number
+  /**
+   * 판매 임포트에서 "못 찾은 상품"을 등록하러 넘어올 때 파일에 적혀 있던 POS
+   * 메뉴명. 이 값은 **한 글자도 바꾸지 않고** 채운다 — 다음 임포트에서 이
+   * 상품을 찾아낼 열쇠라, 보기 좋으라고 괄호나 띄어쓰기를 손대면 그 파일이
+   * 또 안 걸린다.
+   */
+  defaultPosName?: string
 }) {
   const [state, formAction, pending] = useActionState<CreateProductState, FormData>(
     createProduct,
@@ -86,7 +94,7 @@ export function ProductForm({
   const [channel, setChannel] = useState('')
   const [unit, setUnit] = useState('개')
   const [purchaseUnitName, setPurchaseUnitName] = useState('')
-  const [posName, setPosName] = useState('')
+  const [posName, setPosName] = useState(defaultPosName)
   const [description, setDescription] = useState('')
   // 켜면 판매가·원가·기초수량 칸이 "박스당 값"이 된다. 저장 직전에 낱개로
   // 환산하므로 서버 계약은 그대로다 — 입수(≥2)가 있는 줄에만 적용된다.

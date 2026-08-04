@@ -8,8 +8,18 @@ import { ProductForm } from './product-form'
 
 export const metadata = { title: '상품 등록' }
 
-export default async function NewProductPage() {
+export default async function NewProductPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
   const supabase = await createClient()
+
+  // 판매 임포트의 "못 찾은 상품 → 상품 등록" 에서 넘어온 POS 메뉴명.
+  // 배열로 오는 경우(같은 키가 두 번)는 버린다 — 어느 쪽이 맞는지 알 수 없는데
+  // 하나를 골라 채우면 다음 임포트가 엉뚱한 이름으로 걸린다.
+  const posNameParam = (await searchParams).posName
+  const defaultPosName = typeof posNameParam === 'string' ? posNameParam.slice(0, 200) : ''
 
   const [categories, settings, channelRows] = await Promise.all([
     supabase.from('categories').select('id, name, parent_id'),
@@ -40,6 +50,7 @@ export default async function NewProductPage() {
         categories={options}
         channels={channels}
         defaultLowStock={settings.data?.default_low_stock ?? 0}
+        defaultPosName={defaultPosName}
       />
     </div>
   )

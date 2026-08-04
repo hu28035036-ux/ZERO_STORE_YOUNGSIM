@@ -68,17 +68,19 @@ test('매출현황: 네 열이 붙는다', () => {
   assert.equal(MAECHUL[m.barcode!], '바코드번호')
   assert.equal(MAECHUL[m.name!], '메뉴명')
   assert.equal(MAECHUL[m.qty!], '판매수량')
-  // 할인 **전** 정가 합계여야 한다. 앱이 amount ÷ qty 로 정가를 내고, 그 값이
-  // 등록 판매가와 맞는지로 매칭을 확인한다.
-  assert.equal(MAECHUL[m.amount!], '매출금액')
+  // 할인 **후** 실제로 받은 돈이어야 한다. 이 값이 그대로 원장의 매출이 된다.
+  // '매출금액'(할인 전)을 집으면 반값행사 줄이 두 배로 박힌다.
+  assert.equal(MAECHUL[m.amount!], '실매출')
 })
 
 test('매출현황: 뜻이 다른 금액 열은 하나도 안 붙는다', () => {
   const m = guessSales(MAECHUL)
   const attached = Object.values(m).map((i) => MAECHUL[i])
-  // 실매출·순매출은 할인 후, 객단가는 할인 후 금액을 '건수'로 나눈 값이라
-  // 수량과 안 맞는다. 셋 중 하나라도 붙으면 매출이 조용히 낮게 박힌다.
-  for (const bad of ['실매출', '순매출', '객단가', '할인금액', '부가세']) {
+  // '순매출' 은 부가세를 뺀 값이라 매출이 10% 작게 박히고, '객단가' 는 표준
+  // 뜻이 매출÷거래건수라 수량이 여러 개인 줄에서 어긋난다. '매출금액' 은
+  // 할인 전 정가라 반값행사 줄을 두 배로 만든다 — 실매출이 있으면 지고 있어야
+  // 한다. 넷 중 하나라도 붙으면 매출이 조용히 틀린다.
+  for (const bad of ['매출금액', '순매출', '객단가', '할인금액', '부가세']) {
     assert.ok(!attached.includes(bad), `${bad} 가 붙었다`)
   }
   // 분류명을 option 에 이으면 안 된다 — `상온) 시리얼/쉐이크` 같은 값인데
@@ -106,4 +108,23 @@ test('한 열은 한 뜻에만 쓰인다', () => {
   const m = guessSales(headers)
   assert.equal(headers[m.amount!], '금액')
   assert.equal(m.price, undefined)
+})
+
+test('실매출이 없는 POS 는 매출금액으로 떨어진다', () => {
+  // 할인 열이 아예 없는 내보내기도 있다. 그때는 매출금액이 곧 받은 돈이라
+  // 이 자리를 비워 두면 등록 판매가로 반영돼 파일이 말한 값과 어긋난다.
+  const headers = ['바코드번호', '메뉴명', '매출금액', '판매수량']
+  const m = guessSales(headers)
+  assert.equal(headers[m.amount!], '매출금액')
+})
+
+test('실매출과 매출금액이 같이 있으면 실매출이 이긴다', () => {
+  // 열 순서를 뒤집어도 결과가 같아야 한다 — 시트에서 더 왼쪽이라는 이유로
+  // 할인 전 금액이 이기던 것이 원래 버그였다.
+  for (const headers of [
+    ['수량', '매출금액', '실매출'],
+    ['수량', '실매출', '매출금액'],
+  ]) {
+    assert.equal(headers[guessSales(headers).amount!], '실매출')
+  }
 })
