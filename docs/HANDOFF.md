@@ -5,7 +5,7 @@
 여기에는 커밋에 안 남는 것들을 적는다: 무엇이 검증됐고 무엇이 안 됐는지,
 DB 의 현재 상태, 막혀 있는 것, 다시 밟게 될 함정.
 
-최종 갱신: 2026-08-05 / 브랜치 `claude/sales-record-excel-quantity-bk8g0e`
+최종 갱신: 2026-08-05 / `main` (`feca644` — 프로덕션에 배포됨)
 
 ---
 
@@ -1246,10 +1246,19 @@ of view column` 으로 실패했다 — 브랜치가 갈라진 채 DB 만 앞서
 
 ### 저장소 상태
 
-- 저장소 `hu28035036-ux/ZERO_STORE_YOUNGSIM`, 브랜치
-  `claude/inventory-management-planning-fk6i1t`. 기본 브랜치는 건드리지 않았다.
-- **PR 은 아직 만들지 않았다.** 사용자가 요청하지 않아서다. 만들 때는 저장소에
-  PR 템플릿이 있는지 먼저 확인할 것 (지금은 없다).
+- 저장소 `hu28035036-ux/ZERO_STORE_YOUNGSIM`. **2026-08-05 에 `main` 이
+  `feca644` 까지 올라갔고 프로덕션 배포가 나갔다** — 판매 임포트의 POS 메뉴명
+  1순위 매칭과 판매건수 방어가 이제 실사용 앱에 들어 있다. 그 전까지는 배포
+  앱이 옛 순서(바코드 우선)로 붙고 있었다.
+- **squash 가 아니라 fast-forward 로 올렸다.** 이 저장소는 "왜 그렇게 했는지"가
+  커밋 메시지에 있다는 전제로 굴러간다(이 문서 머리가 `git log` 를 먼저 읽으라고
+  하는 이유다). 세 커밋을 하나로 뭉개면 그 근거가 사라진다. PR #1 은 squash 였는데
+  그때 네 커밋의 본문이 실제로 없어졌다 — 다음에도 fast-forward 로 해라.
+- **배포 확인은 GitHub deployments 의 Production 레코드까지다**
+  (sha `feca644` · state success · 프로덕션 URL 200). 같은 커밋의 preview 빌드가
+  이미 있어서 Vercel 이 재빌드 없이 승격했고, 그래서 배포가 1초 만에 success 다 —
+  고장이 아니다. **로그인해서 화면으로 확인하지는 못했다** (이 환경은
+  `*.supabase.co` egress 차단). 실사용 확인은 사용자 몫으로 남아 있다.
 - `.env.local` 은 gitignore 라 저장소에 없다. 새로 받으면 만들어야 하고, 없으면
   빌드가 그 자리에서 실패한다 (`lib/supabase/env.ts`). 값은 `README.md` 에 표로
   있다.
