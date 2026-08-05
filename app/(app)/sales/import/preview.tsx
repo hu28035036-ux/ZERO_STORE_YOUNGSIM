@@ -478,7 +478,8 @@ export function ImportPreview({
       ) : null}
 
       <div className="flex gap-2">
-        <Button variant="secondary" onClick={onRestart} disabled={saving}>
+        {/* shrink-0 을 빼면 옆의 full 버튼이 이 버튼을 글자보다 좁게 눌러 쪼갠다 */}
+        <Button variant="secondary" className="shrink-0" onClick={onRestart} disabled={saving}>
           다른 파일
         </Button>
         <Button full disabled={!canConfirm} onClick={() => confirm({ force: false })}>

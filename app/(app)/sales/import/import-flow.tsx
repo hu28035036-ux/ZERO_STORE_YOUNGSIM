@@ -449,7 +449,12 @@ function ColumnPicker({
       <SamplePreview headers={headers} rows={rows} map={map} />
 
       <div className="flex gap-2">
-        <Button variant="secondary" onClick={onBack}>
+        {/*
+          shrink-0 이 없으면 옆의 full 버튼(w-full)이 이 버튼을 제 글자보다 좁게
+          눌러서 "다른 파 / 일" 로 쪼개진다. 1280px 데스크톱에서도 그렇다 —
+          자리가 모자라서가 아니라 flex 가 이쪽만 줄이기 때문이다.
+        */}
+        <Button variant="secondary" className="shrink-0" onClick={onBack}>
           다른 파일
         </Button>
         <Button
