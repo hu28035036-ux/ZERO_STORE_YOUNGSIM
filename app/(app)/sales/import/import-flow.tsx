@@ -13,6 +13,7 @@ import {
   COLUMN_LABEL,
   guessMapping,
   headerSignature,
+  isCountColumn,
   loadSavedMapping,
   type ColumnKey,
   type ColumnMap,
@@ -125,13 +126,13 @@ export function ImportFlow({ device }: { device: Device }) {
     // 하나하나 대조해야 한다 — 대부분의 파일에서 그건 헛수고다.
     // 못 알아낸 경우에만 열 지정 화면을 띄운다.
     const saved = loadSavedMapping(signature)
-    if (saved && isUsable(saved)) {
+    if (saved && isUsable(saved, headers)) {
       setConfirmedMap({ data, headerRow, map: saved, signature, source: 'remembered' })
       return
     }
 
     const guess = guessMapping(headers)
-    if (isUsable(guess)) {
+    if (isUsable(guess, headers)) {
       setConfirmedMap({ data, headerRow, map: guess, signature, source: 'guessed' })
       return
     }
@@ -321,9 +322,17 @@ export function ImportFlow({ device }: { device: Device }) {
   )
 }
 
-/** (바코드 또는 상품명) + 수량이 있어야 매칭이 가능하다. */
-function isUsable(map: ColumnMap): boolean {
-  return (map.barcode != null || map.name != null) && map.qty != null
+/**
+ * (바코드 또는 상품명) + 수량이 있어야 매칭이 가능하다.
+ *
+ * 수량이 '건수' 열이면 없는 것으로 친다. 지난번에 사람이 그렇게 골라 기억된
+ * 지정이 그대로 되살아나는 길을 막는 것이다 — 그러면 자동 추측으로 떨어져
+ * 판매수량을 다시 집는다.
+ */
+function isUsable(map: ColumnMap, headers: string[]): boolean {
+  if (map.barcode == null && map.name == null) return false
+  if (map.qty == null) return false
+  return !isCountColumn(headers[map.qty] ?? '')
 }
 
 function ColumnPicker({
@@ -347,8 +356,12 @@ function ColumnPicker({
 
   const headers = data[headerRow].map(cellToText)
   const rows = data.slice(headerRow + 1)
-  const usable = isUsable(map)
+  const usable = isUsable(map, headers)
   const keys: ColumnKey[] = ['barcode', 'name', 'option', 'qty', 'price', 'amount', 'date']
+
+  // 수량 자리에 '건수' 를 골랐는가. 못 고르게 감추지 않고 고르면 말해준다 —
+  // 감추면 왜 그 열이 없는지 몰라 파일이 잘못된 줄 안다.
+  const countQty = map.qty != null && isCountColumn(headers[map.qty] ?? '')
 
   // 같은 열을 두 뜻에 이으면 한쪽이 조용히 틀린다. 미리 막는다.
   const usedTwice = new Set(
@@ -417,6 +430,14 @@ function ColumnPicker({
             ))}
           </div>
 
+          {countQty ? (
+            <p role="alert" className="text-danger text-sm leading-relaxed">
+              수량에 <b>{headers[map.qty!]}</b> 를 지정하셨습니다. 이건 몇 번
+              팔렸는지(횟수)라서 재고에서 빠질 개수가 아닙니다 — 한 번에 3개를
+              팔아도 1 로 셉니다. <b>판매수량</b> 열을 고르세요.
+            </p>
+          ) : null}
+
           {usedTwice.size > 0 ? (
             <p role="alert" className="text-danger text-sm">
               같은 열이 두 가지 뜻에 지정돼 있습니다. 하나만 남기세요.
@@ -439,7 +460,7 @@ function ColumnPicker({
           이 지정으로 계속
         </Button>
       </div>
-      {!usable ? (
+      {!usable && !countQty ? (
         <p className="text-ink-muted text-sm">
           바코드나 상품명 중 하나, 그리고 수량 열을 지정해야 계속할 수 있습니다.
         </p>

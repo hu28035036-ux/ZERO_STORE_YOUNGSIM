@@ -33,7 +33,7 @@ export const COLUMN_HINT: Record<ColumnKey, string> = {
   barcode: '있으면 정확히 한 상품으로 맞습니다',
   name: '바코드가 없거나 못 찾은 줄은 이름으로 찾습니다',
   option: '같은 이름이 여러 개일 때 옵션으로 좁힙니다',
-  qty: '판 개수',
+  qty: '판 개수. 몇 번 팔렸는지(건수)가 아니라 몇 개 팔렸는지입니다',
   price: '한 개 가격. 없으면 금액÷수량 또는 등록 판매가를 씁니다',
   amount: '줄 합계. 단가가 없을 때 수량으로 나눠 씁니다',
   date: '없으면 화면에서 날짜 하나를 고릅니다',
@@ -48,6 +48,26 @@ export function normalizeHeader(h: string): string {
     .toLowerCase()
     .replace(/\(.*?\)/g, '')
     .replace(/[\s_\-.:'"‘’“”]/g, '')
+}
+
+/**
+ * '건수' 열인가 — 판 **개수**가 아니라 판 **횟수**다.
+ *
+ * POS 매출현황에는 `거래건수`·`판매건수`·`판매수량` 이 나란히 있다. 한 손님이
+ * 같은 물건을 3개 사면 건수는 1, 수량은 3이다. **재고에서 빠져야 하는 값은
+ * 수량이다.** 건수를 수량 자리에 넣으면 재고가 실제보다 덜 빠지는데 화면
+ * 어디에도 티가 안 난다 — 숫자가 멀쩡해 보이고 합계도 그럴듯해서, 몇 주 뒤
+ * 재고가 안 맞을 때에야 드러난다.
+ *
+ * 자동 추측이 안 집는 것만으로는 부족하다. 사람이 열 지정 드롭다운에서
+ * 고를 수도 있고, 지난번에 그렇게 고른 것이 localStorage 에 남아 있을 수도
+ * 있다. 그래서 판정을 한 곳에 두고 세 경로(추측·기억·직접지정)가 다 쓴다.
+ *
+ * 'count' 같은 영문은 일부러 안 넣는다 — 평범한 CSV 에서는 그냥 수량을 뜻하는
+ * 일이 흔해서, 막으면 멀쩡한 파일이 안 올라간다. '건수' 는 그런 애매함이 없다.
+ */
+export function isCountColumn(header: string): boolean {
+  return normalizeHeader(header).includes('건수')
 }
 
 /**
@@ -74,7 +94,15 @@ const GUESS: [ColumnKey, string[]][] = [
   ['barcode', ['바코드', 'barcode', '바코드번호', 'code', 'jan', 'ean', 'upc']],
   // '메뉴명' 은 이 매장 POS(메뉴별 매출현황)의 표기다. 앞으로도 같은 양식을 쓴다.
   ['name', ['상품명', '상품', '품명', '제품명', '상품이름', 'name', 'product', 'item', '품목', '품목명', '메뉴명']],
-  ['qty', ['수량', '판매수량', '개수', '판매개수', 'qty', 'quantity', '갯수']],
+  // **`판매수량` 이 `수량` 보다 먼저다.** 이 값이 재고에서 빠지는 수다.
+  // 한동안 반대였다. 이 매장 POS 매출현황에는 `수량` 이라는 열이 없어서 결과가
+  // 같았지만, 요약 시트를 붙여 내보내는 POS 처럼 `수량`(전체 합계)과
+  // `판매수량`(그 상품이 팔린 개수)이 나란히 오는 파일에서는 앞의 것이 이긴다.
+  // 사전의 규칙이 "구체적인 말을 먼저"인 것과도 어긋나 있었다.
+  //
+  // `판매건수`·`거래건수` 는 여기 없을 뿐 아니라 isCountColumn 으로 한 번 더
+  // 막는다 — 사람이 손으로 고르는 길이 따로 있어서다.
+  ['qty', ['판매수량', '판매개수', '수량', '개수', '갯수', 'qty', 'quantity']],
   // **'실매출'(할인 후)이 먼저다.** 이 값이 원장에 매출로 박힌다.
   //
   // 한동안 '매출금액'(할인 전 정가)이 먼저였다. 근거는 "amount ÷ qty 가 등록
@@ -108,6 +136,8 @@ export function guessMapping(headers: string[]): ColumnMap {
     search: for (const word of words) {
       for (let i = 0; i < normalized.length; i++) {
         if (used.has(i)) continue
+        // 사전에 '건수' 가 든 말을 누가 넣더라도 수량에는 안 붙는다.
+        if (key === 'qty' && isCountColumn(headers[i])) continue
         if (normalized[i] === word) {
           map[key] = i
           used.add(i)

@@ -16,7 +16,10 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { guessMapping as guessSales } from '../app/(app)/sales/import/columns.ts'
+import {
+  guessMapping as guessSales,
+  isCountColumn,
+} from '../app/(app)/sales/import/columns.ts'
 import { guessMapping as guessProduct } from '../app/(app)/stock/import/columns.ts'
 
 /** 본사 초도 발주 시트의 제목 줄. A열이 비어 있는 것까지 원본 그대로다. */
@@ -90,6 +93,47 @@ test('매출현황: 뜻이 다른 금액 열은 하나도 안 붙는다', () => 
   assert.equal(m.date, undefined)
   // 단가는 비워 둬야 앱이 amount ÷ qty 로 정가를 낸다.
   assert.equal(m.price, undefined)
+})
+
+test('매출현황: 수량은 건수가 아니라 판매수량이다', () => {
+  const m = guessSales(MAECHUL)
+  assert.equal(MAECHUL[m.qty!], '판매수량')
+  // 이 시트에는 건수처럼 생긴 열이 둘 있다. 한 손님이 3개를 사면 건수는 1,
+  // 수량은 3이다 — 건수가 붙으면 재고가 덜 빠지고 아무 데도 티가 안 난다.
+  for (const bad of ['거래건수', '판매건수']) {
+    assert.ok(
+      !Object.values(m).map((i) => MAECHUL[i]).includes(bad),
+      `${bad} 가 붙었다`,
+    )
+  }
+})
+
+test('수량과 판매수량이 둘 다 있으면 판매수량이 이긴다', () => {
+  // 열 순서를 뒤집어도 결과가 같아야 한다 — 시트에서 더 왼쪽이라는 이유로
+  // 뭉뚱그린 열이 이기던 것이 amount 쪽에서 이미 겪은 버그다.
+  for (const headers of [
+    ['상품명', '수량', '판매수량', '금액'],
+    ['상품명', '판매수량', '수량', '금액'],
+  ]) {
+    assert.equal(headers[guessSales(headers).qty!], '판매수량')
+  }
+  assert.equal(guessSales(['상품명', '개수', '판매개수']).qty, 2)
+})
+
+test('건수 열은 수량 자리에 절대 안 붙는다', () => {
+  // 판매수량이 아예 없는 내보내기. 건수로 때우느니 비워 두고 사람에게 묻는다 —
+  // 화면이 이 상태에서 열 지정을 띄우고 계속 버튼을 잠근다.
+  const m = guessSales(['메뉴명', '거래건수', '판매건수', '실매출'])
+  assert.equal(m.qty, undefined)
+})
+
+test('isCountColumn: 건수만 잡고 수량은 안 잡는다', () => {
+  for (const yes of ['판매건수', '거래건수', '판매 건수', '판매건수(건)', '건수']) {
+    assert.ok(isCountColumn(yes), `${yes} 를 못 잡았다`)
+  }
+  for (const no of ['판매수량', '수량', '개수', '판매옵션수량', 'qty', '']) {
+    assert.ok(!isCountColumn(no), `${no} 를 잘못 잡았다`)
+  }
 })
 
 test('평범한 판매 CSV 는 예전과 똑같이 붙는다', () => {
