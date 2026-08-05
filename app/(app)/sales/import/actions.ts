@@ -75,11 +75,40 @@ function toFound(r: VariantRow): FoundItem {
 const VARIANT_COLS =
   'variant_id, product_name, pos_name, option_label, sale_price, cost_price, stock_qty, barcode, unit'
 
+/** 후보 목록을 한 줄의 판정으로 좁힌다. 세 경로가 같은 규칙을 쓰게 한 곳이다. */
+function narrow(list: VariantRow[], option: string | null): ResolvedRow | null {
+  if (list.length === 0) return null
+  if (list.length === 1) return { status: 'ok', item: toFound(list[0]) }
+  // 같은 이름에 변형 여러 개. 파일에 옵션 열이 있으면 그걸로 좁힌다.
+  const byOption = option ? list.filter((v) => (v.option_label ?? '') === option) : []
+  if (byOption.length === 1) return { status: 'ok', item: toFound(byOption[0]) }
+  return { status: 'ambiguous', candidates: list.map(toFound) }
+}
+
 /**
- * 파일의 각 줄을 상품(변형)에 잇는다. 바코드 정확 일치 → 상품명 정확 일치 →
- * POS 메뉴명 정확 일치 → 유사 검색 순서다. N+1 을 만들지 않는다 — distinct
- * 값들을 모아 왕복 몇 번으로 끝낸다. 수백 줄 파일이 줄마다 조회하면 그 수만큼
- * 왕복이 생긴다.
+ * 파일의 각 줄을 상품(변형)에 잇는다. **POS 메뉴명 정확 일치 → 바코드 정확
+ * 일치 → 발주명 정확 일치 → 유사 검색** 순서다. N+1 을 만들지 않는다 —
+ * distinct 값들을 모아 왕복 몇 번으로 끝낸다. 수백 줄 파일이 줄마다 조회하면
+ * 그 수만큼 왕복이 생긴다.
+ *
+ * **한동안 바코드가 1순위였다** ("이름이 같이 있어도 바코드를 믿는다"). 사용자
+ * 결정으로 뒤집었고(2026-08-05), 프로덕션 데이터가 그 결정을 뒷받침한다:
+ *
+ * | | 상품 수 |
+ * |---|---|
+ * | POS 메뉴명 ○ · POS 바코드 ○ | 315 |
+ * | **POS 메뉴명만 ○** | **73** |
+ * | **POS 바코드만 ○** | **0** |
+ *
+ * 바코드로만 찾을 수 있는 상품은 **하나도 없고**, 메뉴명으로만 찾을 수 있는
+ * 것이 73개 더 있다. `pos_name` 은 중복이 0이라 이 경로가 애매해질 일도 없다.
+ * 바코드는 지웠으면 POS 파일에서는 아무것도 안 잃었겠지만, `바코드·상품명·수량`
+ * 만 있는 평범한 CSV(`docs/samples/판매기록-예시.csv`)가 붙을 길이 사라진다 —
+ * 그래서 **지우지 않고 보조로 남겼다.**
+ *
+ * 순서를 되돌리지 마라. POS 의 EAN-13 은 사람이 검수표로 짝지어 심은 것이라
+ * 잘못 심긴 것이 섞여 있을 수 있는데, 그러면 판매가 **엉뚱한 상품의 재고**를
+ * 깎는다. 메뉴명은 POS 가 그 줄에 대해 말한 이름 그 자체다.
  *
  * **조회 실패를 전부 throw 한다.** 예전에는 `{ data }` 만 받고 `?? []` 로
  * 넘겼는데, 그러면 요청이 실패해도 화면에는 "등록된 상품에서 찾지 못했습니다"
@@ -97,61 +126,12 @@ export async function resolveSaleRows(raw: MatchQuery[]): Promise<ResolvedRow[]>
 
   const supabase = await createClient()
 
-  // 1) 바코드 정확 일치. barcodes 는 부바코드까지 갖고 있어서 v_variant_stock
-  //    의 대표 바코드 한 줄로는 못 찾는 코드도 여기서는 잡힌다. POS 의 EAN-13
-  //    과 메뉴코드도 여기 부바코드로 들어가 있어서 이 단계에서 붙는다.
-  const codes = [...new Set(rows.map((r) => r.barcode).filter((v): v is string => !!v))]
-  const codeToVariant = new Map<string, string>()
-  for (const part of chunks(codes)) {
-    const { data, error } = await supabase
-      .from('barcodes')
-      .select('code, variant_id')
-      .in('code', part)
-    if (error) throw new Error('바코드 조회에 실패했습니다: ' + error.message)
-    for (const b of data ?? []) codeToVariant.set(b.code, b.variant_id)
-  }
-
-  // 2) 이름 정확 일치 후보. 바코드로 못 찾은 줄만 대상이다.
-  //    한글 상품명이므로 개수가 아니라 URL 인코딩 길이로 끊는다 — 개수 기준
+  // 1) POS 메뉴명 정확 일치 — **1순위다.** 파일의 모든 이름을 대상으로 한다.
+  //    한글 이름이므로 개수가 아니라 URL 인코딩 길이로 끊는다 — 개수 기준
   //    200개면 percent 인코딩으로 URL 이 3만 자를 넘어 요청이 통째로 실패한다.
-  const names = [
-    ...new Set(
-      rows
-        .filter((r) => !(r.barcode && codeToVariant.has(r.barcode)))
-        .map((r) => r.name)
-        .filter((v): v is string => !!v),
-    ),
-  ]
-  const nameToVariants = new Map<string, VariantRow[]>()
-  for (const part of chunksByEncodedLength(names)) {
-    const { data, error } = await supabase
-      .from('v_variant_stock')
-      .select(VARIANT_COLS)
-      .eq('is_active', true)
-      .eq('product_active', true)
-      .in('product_name', part)
-    if (error) throw new Error('상품명 조회에 실패했습니다: ' + error.message)
-    for (const v of data ?? []) {
-      const key = v.product_name ?? ''
-      const list = nameToVariants.get(key) ?? []
-      list.push(v)
-      nameToVariants.set(key, list)
-    }
-  }
-
-  // 2-b) 상품명으로도 못 찾은 이름만 POS 메뉴명으로 한 번 더 본다.
-  //      POS 파일의 메뉴명은 발주명과 표기가 다르다 — `라라스윗) 저당 카라멜
-  //      팝콘` 처럼 괄호 하나로 어긋나거나, 브랜드가 아예 다르다.
-  //
-  //      이 단계가 유사 검색보다 **앞**이어야 한다. 유사 검색은 상한이 30건이라,
-  //      정확 일치로 풀 수 있는 것을 거기까지 흘리면 예산을 다 쓴다.
-  //
-  //      기존 in('product_name') 과 or 로 합치지 않는다. PostgREST 에서 in 과
-  //      or 를 섞으면 URL 이 더 길어지는데, 이 함수가 바로 그 길이 때문에
-  //      조용히 죽었던 곳이다. 순서대로 두 번 조회하는 편이 안전하다.
+  const names = [...new Set(rows.map((r) => r.name).filter((v): v is string => !!v))]
   const posNameToVariants = new Map<string, VariantRow[]>()
-  const unresolvedNames = names.filter((n) => !nameToVariants.has(n))
-  for (const part of chunksByEncodedLength(unresolvedNames)) {
+  for (const part of chunksByEncodedLength(names)) {
     const { data, error } = await supabase
       .from('v_variant_stock')
       .select(VARIANT_COLS)
@@ -165,6 +145,29 @@ export async function resolveSaleRows(raw: MatchQuery[]): Promise<ResolvedRow[]>
       list.push(v)
       posNameToVariants.set(key, list)
     }
+  }
+
+  // "이 줄은 POS 메뉴명으로 풀렸다" 의 정의. 아래 조회 대상 추리기와 마지막
+  // 판정이 **같은 함수**를 봐야 한다 — 어긋나면 조회는 건너뛰었는데 판정은
+  // 그 값을 기대하는 줄이 생기고, 그 줄만 조용히 못 찾은 것으로 나온다.
+  const posHitFor = (r: MatchQuery): ResolvedRow | null =>
+    r.name ? narrow(posNameToVariants.get(r.name) ?? [], r.option) : null
+
+  // 2) 바코드 정확 일치 — **보조 수단.** 메뉴명으로 못 푼 줄만 대상이다.
+  //    barcodes 는 부바코드까지 갖고 있어서 v_variant_stock 의 대표 바코드
+  //    한 줄로는 못 찾는 코드도 여기서는 잡힌다.
+  const unmatchedByPos = rows.filter((r) => posHitFor(r)?.status !== 'ok')
+  const codes = [
+    ...new Set(unmatchedByPos.map((r) => r.barcode).filter((v): v is string => !!v)),
+  ]
+  const codeToVariant = new Map<string, string>()
+  for (const part of chunks(codes)) {
+    const { data, error } = await supabase
+      .from('barcodes')
+      .select('code, variant_id')
+      .in('code', part)
+    if (error) throw new Error('바코드 조회에 실패했습니다: ' + error.message)
+    for (const b of data ?? []) codeToVariant.set(b.code, b.variant_id)
   }
 
   // 바코드로 찾은 변형들의 정보도 v_variant_stock 에서 한 번에 가져온다.
@@ -181,6 +184,47 @@ export async function resolveSaleRows(raw: MatchQuery[]): Promise<ResolvedRow[]>
       .in('variant_id', part)
     if (error) throw new Error('상품 정보 조회에 실패했습니다: ' + error.message)
     for (const v of data ?? []) idToVariant.set(v.variant_id!, v)
+  }
+
+  const barcodeHitFor = (r: MatchQuery): VariantRow | undefined => {
+    if (!r.barcode) return undefined
+    const vid = codeToVariant.get(r.barcode)
+    return vid ? idToVariant.get(vid) : undefined
+  }
+
+  // 3) 발주명(이 앱의 대표 이름) 정확 일치 — 앞의 둘로도 못 푼 줄만.
+  //    POS 파일에서는 거의 안 걸린다(388개 전부 메뉴명과 표기가 다르다).
+  //    바코드·상품명만 있는 평범한 CSV 를 위한 경로다.
+  //
+  //    in('pos_name') 과 or 로 합치지 않는다. PostgREST 에서 in 과 or 를 섞으면
+  //    URL 이 더 길어지는데, 이 함수가 바로 그 길이 때문에 조용히 죽었던
+  //    곳이다. 순서대로 두 번 조회하는 편이 안전하다.
+  //
+  //    이 단계가 유사 검색보다 **앞**이어야 한다. 유사 검색은 상한이 30건이라,
+  //    정확 일치로 풀 수 있는 것을 거기까지 흘리면 예산을 다 쓴다.
+  const remainingNames = [
+    ...new Set(
+      rows
+        .filter((r) => posHitFor(r) === null && !barcodeHitFor(r))
+        .map((r) => r.name)
+        .filter((v): v is string => !!v),
+    ),
+  ]
+  const nameToVariants = new Map<string, VariantRow[]>()
+  for (const part of chunksByEncodedLength(remainingNames)) {
+    const { data, error } = await supabase
+      .from('v_variant_stock')
+      .select(VARIANT_COLS)
+      .eq('is_active', true)
+      .eq('product_active', true)
+      .in('product_name', part)
+    if (error) throw new Error('상품명 조회에 실패했습니다: ' + error.message)
+    for (const v of data ?? []) {
+      const key = v.product_name ?? ''
+      const list = nameToVariants.get(key) ?? []
+      list.push(v)
+      nameToVariants.set(key, list)
+    }
   }
 
   // 3) 그래도 못 찾은 줄만 유사 검색. 상한을 두는 이유: 전부 안 걸리는 파일
@@ -215,34 +259,31 @@ export async function resolveSaleRows(raw: MatchQuery[]): Promise<ResolvedRow[]>
 
   const out: ResolvedRow[] = []
   for (const row of rows) {
-    // 바코드가 맞으면 그걸로 끝. 파일에 이름이 같이 있어도 바코드를 믿는다.
-    if (row.barcode) {
-      const vid = codeToVariant.get(row.barcode)
-      const v = vid ? idToVariant.get(vid) : undefined
-      if (v) {
-        out.push({ status: 'ok', item: toFound(v) })
-        continue
-      }
+    // ① POS 메뉴명이 한 상품으로 떨어지면 그걸로 끝. 파일에 바코드가 같이
+    //    있어도 메뉴명을 믿는다 — 바코드가 보조라는 것이 이 한 줄이다.
+    const posHit = posHitFor(row)
+    if (posHit?.status === 'ok') {
+      out.push(posHit)
+      continue
     }
 
+    // ② 바코드. 메뉴명이 후보를 여럿 준 경우에도 여기서 풀릴 수 있어서,
+    //    ambiguous 를 곧장 내보내지 않고 바코드를 한 번 더 본다.
+    const v = barcodeHitFor(row)
+    if (v) {
+      out.push({ status: 'ok', item: toFound(v) })
+      continue
+    }
+    if (posHit) {
+      out.push(posHit)
+      continue
+    }
+
+    // ③ 발주명 → ④ 유사 검색
     if (row.name) {
-      // 상품명으로 못 찾으면 POS 메뉴명으로 본다. 둘 다 정확 일치라 우열이
-      // 없지만, 발주명이 이 앱의 대표 이름이므로 그쪽을 먼저 믿는다.
-      const exact = nameToVariants.get(row.name) ?? posNameToVariants.get(row.name) ?? []
-      if (exact.length === 1) {
-        out.push({ status: 'ok', item: toFound(exact[0]) })
-        continue
-      }
-      if (exact.length > 1) {
-        // 같은 이름에 변형 여러 개. 파일에 옵션 열이 있으면 그걸로 좁힌다.
-        const byOption = row.option
-          ? exact.filter((v) => (v.option_label ?? '') === row.option)
-          : []
-        if (byOption.length === 1) {
-          out.push({ status: 'ok', item: toFound(byOption[0]) })
-        } else {
-          out.push({ status: 'ambiguous', candidates: exact.map(toFound) })
-        }
+      const nameHit = narrow(nameToVariants.get(row.name) ?? [], row.option)
+      if (nameHit) {
+        out.push(nameHit)
         continue
       }
       const near = await fuzzy(row.name)
