@@ -21,8 +21,9 @@ function refresh() {
   revalidatePath('/stock')
   revalidatePath('/movements')
   revalidatePath('/stats')
-  revalidatePath('/sales')
-  revalidatePath('/sales/batches')
+  // 'layout' 이라 /sales 아래 전부(배치·영수증 상세 포함)가 같이 갱신된다.
+  // 영수증 상세에서 되돌렸을 때 그 화면이 "되돌림"으로 바로 바뀌어야 한다.
+  revalidatePath('/sales', 'layout')
 }
 
 export async function voidBatch(

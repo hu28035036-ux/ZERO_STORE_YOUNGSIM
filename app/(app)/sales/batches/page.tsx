@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import { ActionForm } from '@/components/ui/action-form'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDateTime, formatQty, formatWon } from '@/lib/constants'
@@ -128,7 +130,10 @@ export default async function BatchesPage() {
                   >
                     <div className="min-w-0">
                       <p className="text-ink text-sm font-medium" data-numeric>
-                        {formatDateTime(o.occurred_at)}
+                        {/* 날짜를 누르면 영수증 내용이 보인다 — /sales 목록과 같은 길 */}
+                        <Link href={`/sales/${o.id}`} className="hover:underline">
+                          {formatDateTime(o.occurred_at)}
+                        </Link>
                         {voided ? (
                           <span className="text-ink-subtle ml-2 text-xs">되돌림</span>
                         ) : null}

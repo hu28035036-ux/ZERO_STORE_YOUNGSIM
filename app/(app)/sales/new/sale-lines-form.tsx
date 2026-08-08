@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { Camera, Minus, Plus, ScanLine, Trash2 } from 'lucide-react'
 
@@ -260,7 +261,10 @@ export function SaleLinesForm({ device }: { device: Device }) {
             판매 완료 — {formatQty(state.count)}점 {formatWon(state.total)}
           </p>
           <p className="text-ink-muted mt-1 text-sm">
-            재고와 내역에 반영됐습니다. 다음 손님을 받으세요.
+            재고와 내역에 반영됐습니다.{' '}
+            <Link href={`/sales/${state.orderId}`} className="text-primary underline">
+              방금 기록 보기
+            </Link>
           </p>
         </Card>
       ) : null}

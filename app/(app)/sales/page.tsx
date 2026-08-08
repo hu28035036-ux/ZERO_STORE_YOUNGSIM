@@ -110,29 +110,36 @@ export default async function SalesPage() {
           <Card className="flex flex-col">
             <ul>
               {orders.map((o) => (
-                <li
-                  key={o.id}
-                  className="border-border-base flex items-baseline justify-between gap-3 border-b px-4 py-3 last:border-0"
-                >
-                  <div className="min-w-0">
-                    <p className="text-ink text-sm font-medium" data-numeric>
-                      {formatDateTime(o.occurred_at)}
-                      {o.source === 'import' ? (
-                        <span className="text-ink-subtle ml-2 text-xs">파일</span>
+                <li key={o.id} className="border-border-base border-b last:border-0">
+                  {/* 날짜(줄 전체)를 누르면 그 영수증에 담긴 상품이 보인다.
+                      기록만 쌓이고 열어볼 수 없던 것이 사용자 리포트였다. */}
+                  <Link
+                    href={`/sales/${o.id}`}
+                    className="hover:bg-surface-sunken flex items-baseline justify-between gap-3 px-4 py-3 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-ink text-sm font-medium" data-numeric>
+                        {formatDateTime(o.occurred_at)}
+                        {o.source === 'import' ? (
+                          <span className="text-ink-subtle ml-2 text-xs">파일</span>
+                        ) : null}
+                        {o.item_count === 0 ? (
+                          <span className="text-ink-subtle ml-2 text-xs">되돌림</span>
+                        ) : null}
+                      </p>
+                      {o.memo ? (
+                        <p className="text-ink-muted truncate text-xs">{o.memo}</p>
                       ) : null}
+                    </div>
+                    <p className="shrink-0 text-sm">
+                      <span className="text-ink-muted" data-numeric>
+                        {formatQty(o.item_count)}점
+                      </span>
+                      <span className="text-ink ml-2 font-semibold" data-numeric>
+                        {formatWon(o.total_revenue)}
+                      </span>
                     </p>
-                    {o.memo ? (
-                      <p className="text-ink-muted truncate text-xs">{o.memo}</p>
-                    ) : null}
-                  </div>
-                  <p className="shrink-0 text-sm">
-                    <span className="text-ink-muted" data-numeric>
-                      {formatQty(o.item_count)}점
-                    </span>
-                    <span className="text-ink ml-2 font-semibold" data-numeric>
-                      {formatWon(o.total_revenue)}
-                    </span>
-                  </p>
+                  </Link>
                 </li>
               ))}
             </ul>
