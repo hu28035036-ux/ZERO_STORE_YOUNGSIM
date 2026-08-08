@@ -51,10 +51,16 @@ function humanize(error: PostgrestError): string {
   return error.message
 }
 
-export async function recordMovement(
-  _prev: MovementState,
+/**
+ * 검증부터 RPC 호출까지의 공통 몸통.
+ *
+ * 등록 화면의 큰 폼(recordMovement)과 검색 결과 줄의 빠른 등록(quickMovement)이
+ * 같은 검증·환산·RPC 를 타야 한다. 두 벌로 두면 박스 환산 같은 규칙이 한쪽만
+ * 고쳐지는 날이 온다. 성공하면 처리 후 잔여 재고를 돌려준다.
+ */
+async function applyMovement(
   formData: FormData,
-): Promise<MovementState> {
+): Promise<{ error: string } | { after: number }> {
   await requireUser()
 
   const parsed = schema.safeParse({
@@ -150,37 +156,69 @@ export async function recordMovement(
   if (type === 'stocktake') {
     // record_stocktake 에는 occurred_at 인자가 없다. 실사는 언제나 "지금 센 것"이라
     // 화면에서도 날짜를 받지 않는다.
-    const { error } = await supabase.rpc('record_stocktake', {
+    const { data, error } = await supabase.rpc('record_stocktake', {
       p_variant_id: variantId,
       p_counted_qty: qty,
       p_note: note ?? undefined,
     })
     if (error) return { error: humanize(error) }
-  } else {
-    // 오늘이면 now() 그대로 두어 시각까지 남긴다. 지난 날짜면 그 날 정오로
-    // 박는다 — KST 오프셋을 명시해야 날짜 버킷이 하루 밀리지 않는다.
-    const occurredAt = date && date !== today ? `${date}T12:00:00+09:00` : undefined
-
-    const signed =
-      type === 'purchase' ? qty : type === 'outbound' ? -qty : direction === 'in' ? qty : -qty
-
-    const { error } = await supabase.rpc('record_stock_movement', {
-      p_variant_id: variantId,
-      p_type: type,
-      p_qty: signed,
-      // 입고가 아니면 단가를 넘기지 않는다. 트리거가 그 시점 이동평균 원가를
-      // 스냅샷하도록 두어야 과거 마진이 소급해 바뀌지 않는다.
-      p_unit_cost: type === 'purchase' && unitCost > 0 ? unitCost : undefined,
-      p_supplier_id: type === 'purchase' ? (supplierId ?? undefined) : undefined,
-      p_note: note ?? undefined,
-      p_occurred_at: occurredAt,
-    })
-    if (error) return { error: humanize(error) }
+    return { after: data ?? qty }
   }
+
+  // 오늘이면 now() 그대로 두어 시각까지 남긴다. 지난 날짜면 그 날 정오로
+  // 박는다 — KST 오프셋을 명시해야 날짜 버킷이 하루 밀리지 않는다.
+  const occurredAt = date && date !== today ? `${date}T12:00:00+09:00` : undefined
+
+  const signed =
+    type === 'purchase' ? qty : type === 'outbound' ? -qty : direction === 'in' ? qty : -qty
+
+  const { data, error } = await supabase.rpc('record_stock_movement', {
+    p_variant_id: variantId,
+    p_type: type,
+    p_qty: signed,
+    // 입고가 아니면 단가를 넘기지 않는다. 트리거가 그 시점 이동평균 원가를
+    // 스냅샷하도록 두어야 과거 마진이 소급해 바뀌지 않는다.
+    p_unit_cost: type === 'purchase' && unitCost > 0 ? unitCost : undefined,
+    p_supplier_id: type === 'purchase' ? (supplierId ?? undefined) : undefined,
+    p_note: note ?? undefined,
+    p_occurred_at: occurredAt,
+  })
+  if (error) return { error: humanize(error) }
+  return { after: data ?? 0 }
+}
+
+export async function recordMovement(
+  _prev: MovementState,
+  formData: FormData,
+): Promise<MovementState> {
+  const result = await applyMovement(formData)
+  if ('error' in result) return result
 
   revalidatePath('/movements')
   revalidatePath('/stock')
   redirect('/movements')
+}
+
+export type QuickState = { error: string } | { ok: true; after: number } | null
+
+/**
+ * 검색 결과 줄에서 바로 등록. 화면을 떠나지 않으므로 redirect 가 없고,
+ * 성공을 돌려줘야 그 줄이 입력을 비우고 새 재고를 보여줄 수 있다.
+ */
+export async function quickMovement(
+  _prev: QuickState,
+  formData: FormData,
+): Promise<QuickState> {
+  const result = await applyMovement(formData)
+  if ('error' in result) return result
+
+  // 여기서 revalidatePath 를 부르지 않는 것이 요점이다. 부르면 응답에 실려 온
+  // 페이지 재조회가 useActionState 의 결과 적용과 경합해 **성공 상태가 유실**
+  // 된다 — DB 에는 들어갔는데 화면은 미리보기 그대로라, 사람이 같은 수량을
+  // 한 번 더 누르게 되는 종류의 사고다 (실제로 E2E 가 비결정적으로 재현했다).
+  // 갱신은 성공을 받은 줄이 router.refresh() 로 한다. 다른 화면(홈·재고·통계)은
+  // 동적 렌더라 다음 방문 때 어차피 새로 그려진다.
+  return { ok: true, after: result.after }
 }
 
 export async function voidMovement(

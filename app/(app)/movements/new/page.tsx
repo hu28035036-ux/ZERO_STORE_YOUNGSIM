@@ -1,13 +1,12 @@
 import Link from 'next/link'
 import { Boxes, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 
-import { StockBadge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { formatWon } from '@/lib/constants'
 import { likePattern, productSearchFilter } from '@/lib/search'
 import { createClient } from '@/lib/supabase/server'
 
 import { MovementForm, type SupplierOption, type VariantTarget } from './movement-form'
+import { QuickRow } from './quick-row'
 import { ScanSearchButton } from './scan-search-button'
 
 export const metadata = { title: '입출고 등록' }
@@ -55,9 +54,15 @@ export default async function NewMovementPage({
 
   const rows = found.data ?? []
 
-  // 바코드를 찍으면 보통 한 건만 걸린다. 그때는 목록을 한 번 더 누르게 하지 않고
-  // 바로 폼으로 넘어간다. 이름 검색이 한 건만 맞아도 마찬가지로 그게 정답이다.
-  const target = wanted || rows.length === 1 ? rows[0] : null
+  // 큰 폼은 ?variant= 로 콕 집어 들어왔을 때만 연다. 예전에는 검색 결과가
+  // 한 건이면 바로 폼으로 넘겼는데, 이제 목록의 줄 자체가 빠른 등록 폼이라
+  // 한 건일 때도 목록에 남는 쪽이 손이 덜 간다(수량 칸에 커서까지 준다).
+  const target = wanted ? rows[0] : null
+
+  // 스캔·검색이 한 건으로 떨어졌으면 다음 동작은 수량 입력이다. 이때는 검색칸이
+  // autoFocus 를 가지면 안 된다 — 둘 다 걸면 검색칸이 이겨서 수량 칸 포커스가
+  // 조용히 무시된다(실제로 그랬다).
+  const single = rows.length === 1 && Boolean(q)
 
   const supplierOptions: SupplierOption[] = (suppliers.data ?? []).map((s) => ({
     id: s.id,
@@ -130,9 +135,9 @@ export default async function NewMovementPage({
                   type="search"
                   name="q"
                   defaultValue={q}
-                  // 스캐너는 코드를 치고 엔터를 누른다. 폼이 그대로 제출되면
-                  // 한 건만 맞을 때 바로 등록 화면으로 넘어간다.
-                  autoFocus
+                  // 스캐너는 코드를 치고 엔터를 누른다. 다만 결과가 한 건으로
+                  // 떨어진 화면에서는 그 줄의 수량 칸이 포커스를 가져간다.
+                  autoFocus={!single}
                   placeholder="상품명 · 바코드로 찾기"
                   aria-label="상품 찾기"
                   autoCapitalize="none"
@@ -170,40 +175,30 @@ export default async function NewMovementPage({
               </p>
             </Card>
           ) : (
-            <ul className="flex flex-col gap-2">
-              {rows.map((row) => (
-                <li key={row.variant_id}>
-                  <Link
-                    href={`/movements/new?variant=${row.variant_id}`}
-                    className="block"
-                  >
-                    <Card className="hover:bg-surface-sunken flex items-center justify-between gap-3 p-4 transition-colors">
-                      <div className="min-w-0">
-                        <p className="text-ink truncate text-[0.9375rem] font-medium">
-                          {row.product_name}
-                        </p>
-                        <p className="text-ink-muted truncate text-sm">
-                          {row.option_label ? `${row.option_label} · ` : ''}
-                          {formatWon(row.sale_price)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <StockBadge
-                          qty={row.stock_qty ?? 0}
-                          threshold={row.low_stock_threshold ?? 0}
-                          unit={row.unit}
-                        />
-                        <ChevronRight
-                          size={18}
-                          aria-hidden
-                          className="text-ink-subtle"
-                        />
-                      </div>
-                    </Card>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <>
+              <p className="text-ink-muted text-sm">
+                줄에서 바로 수량을 넣어 등록하세요. 단가·거래처·박스·지난
+                날짜는 “자세히”에서 넣습니다.
+              </p>
+              <ul className="flex flex-col gap-2">
+                {rows.map((row) => (
+                  <li key={row.variant_id}>
+                    <QuickRow
+                      target={{
+                        variantId: row.variant_id!,
+                        productName: row.product_name ?? '',
+                        optionLabel: row.option_label,
+                        stockQty: row.stock_qty ?? 0,
+                        threshold: row.low_stock_threshold ?? 0,
+                        salePrice: Number(row.sale_price ?? 0),
+                        unit: row.unit || '개',
+                      }}
+                      autoFocus={single}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
           {rows.length === SEARCH_LIMIT ? (
