@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Search } from 'lucide-react'
 
 import { cn } from '@/lib/cn'
 
@@ -47,6 +48,26 @@ export function MovementToolbar({ query }: { query: MovementQuery }) {
           <input type="hidden" name="variant" value={query.variantId} />
         ) : null}
 
+        {/* 검색과 기간이 같은 폼이다 — 어느 쪽을 제출해도 다른 조건이 유지된다.
+            따로 폼을 두면 검색하는 순간 잡아둔 기간이 조용히 풀린다. */}
+        <div className="relative min-w-0 flex-1 basis-56">
+          <Search
+            size={18}
+            aria-hidden
+            className="text-ink-subtle pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+          />
+          <input
+            type="search"
+            name="q"
+            defaultValue={query.q}
+            placeholder="상품명으로 찾기"
+            aria-label="내역에서 상품 찾기"
+            autoCapitalize="none"
+            autoComplete="off"
+            className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-touch w-full rounded-lg border pr-3 pl-10 text-base outline-none"
+          />
+        </div>
+
         <label className="flex flex-col gap-1">
           <span className="text-ink-muted text-xs">시작일</span>
           <input
@@ -69,14 +90,14 @@ export function MovementToolbar({ query }: { query: MovementQuery }) {
           type="submit"
           className="bg-surface text-ink border-border-strong hover:bg-surface-sunken h-touch inline-flex items-center rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors"
         >
-          기간 적용
+          적용
         </button>
-        {query.from || query.to ? (
+        {query.q || query.from || query.to ? (
           <Link
-            href={movementHref(query, { from: '', to: '', page: 0 })}
+            href={movementHref(query, { q: '', from: '', to: '', page: 0 })}
             className="text-ink-muted hover:text-ink h-touch inline-flex items-center px-2 text-sm"
           >
-            기간 해제
+            해제
           </Link>
         ) : null}
       </form>

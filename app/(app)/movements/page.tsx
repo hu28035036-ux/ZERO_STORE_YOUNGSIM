@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { Plus, X } from 'lucide-react'
+import { FileUp, Plus, X } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
+import { likePattern } from '@/lib/search'
 import { getDevice } from '@/lib/server-device'
 import { createClient } from '@/lib/supabase/server'
 
@@ -41,6 +42,14 @@ export default async function MovementsPage({
 
   if (query.type !== 'all') list = list.eq('type', query.type)
   if (query.variantId) list = list.eq('variant_id', query.variantId)
+  const pattern = likePattern(query.q)
+  if (pattern) {
+    // lib/search.ts 의 productSearchFilter 는 v_variant_stock 전용이다 —
+    // pos_name·barcode 열이 이 뷰에는 없어서 그대로 쓰면 400 이 난다.
+    list = list.or(
+      `product_name.ilike.${pattern},option_label.ilike.${pattern},sku.ilike.${pattern}`,
+    )
+  }
   if (query.from) list = list.gte('occurred_at', kstDayStart(query.from))
   if (query.to) list = list.lt('occurred_at', kstDayEnd(query.to))
 
@@ -49,19 +58,29 @@ export default async function MovementsPage({
   const fetched = (result.data ?? []) as MovementRow[]
   const hasNext = fetched.length > LIST_LIMIT
   const rows = hasNext ? fetched.slice(0, LIST_LIMIT) : fetched
-  const filtered = query.type !== 'all' || Boolean(query.from || query.to)
+  const filtered =
+    query.type !== 'all' || Boolean(query.from || query.to) || Boolean(pattern)
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-ink text-lg font-semibold tracking-tight">입출고</h1>
-        <Link
-          href="/movements/new"
-          className="bg-primary text-primary-ink hover:bg-primary-hover h-touch inline-flex items-center justify-center gap-2 rounded-lg px-4 text-[0.9375rem] font-medium transition-colors select-none"
-        >
-          <Plus size={18} aria-hidden />
-          등록
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/movements/import"
+            className="border-border-strong text-ink hover:bg-surface-sunken h-touch inline-flex items-center justify-center gap-2 rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors select-none"
+          >
+            <FileUp size={18} aria-hidden />
+            파일로 입고
+          </Link>
+          <Link
+            href="/movements/new"
+            className="bg-primary text-primary-ink hover:bg-primary-hover h-touch inline-flex items-center justify-center gap-2 rounded-lg px-4 text-[0.9375rem] font-medium transition-colors select-none"
+          >
+            <Plus size={18} aria-hidden />
+            등록
+          </Link>
+        </div>
       </div>
 
       {query.variantId ? (
@@ -99,7 +118,7 @@ export default async function MovementsPage({
           </p>
           <p className="text-ink-muted mt-1.5 text-sm">
             {filtered || query.variantId
-              ? '기간이나 종류를 바꿔 보세요.'
+              ? '검색어·기간·종류를 바꿔 보세요.'
               : '위쪽 “등록”으로 입고를 넣으면 여기에 쌓입니다. 상품 등록 때 넣은 기초 재고도 입고로 남습니다.'}
           </p>
         </Card>

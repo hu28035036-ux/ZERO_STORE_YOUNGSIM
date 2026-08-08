@@ -35,6 +35,8 @@ export type MovementQuery = {
   type: MovementFilter
   /** 특정 변형의 내역만. 재고 화면에서 넘어올 때 쓴다. */
   variantId: string | null
+  /** 상품명·옵션·SKU 검색어. 비어 있으면 전체. */
+  q: string
   /** KST 기준 날짜. 비어 있으면 전체 기간. */
   from: string
   to: string
@@ -60,6 +62,7 @@ export function parseMovementQuery(sp: {
     type: FILTER_TYPES.find((t) => t === sp.type) ?? 'all',
     // 모양이 틀린 uuid 를 그대로 넘기면 PostgREST 가 400 을 낸다.
     variantId: UUID.test(variantId) ? variantId : null,
+    q: one(sp.q).trim().slice(0, 40),
     from: DATE.test(from) ? from : '',
     to: DATE.test(to) ? to : '',
     page: Number.isInteger(page) && page > 0 ? page : 0,
@@ -74,6 +77,7 @@ export function movementHref(
   const params = new URLSearchParams()
   if (next.type !== 'all') params.set('type', next.type)
   if (next.variantId) params.set('variant', next.variantId)
+  if (next.q) params.set('q', next.q)
   if (next.from) params.set('from', next.from)
   if (next.to) params.set('to', next.to)
   if (next.page > 0) params.set('page', String(next.page))
