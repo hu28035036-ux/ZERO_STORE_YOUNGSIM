@@ -350,6 +350,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: number
+          import_batch_id: string | null
           note: string | null
           occurred_at: string
           purchase_amount: number | null
@@ -370,6 +371,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
+          import_batch_id?: string | null
           note?: string | null
           occurred_at?: string
           purchase_amount?: number | null
@@ -390,6 +392,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: never
+          import_batch_id?: string | null
           note?: string | null
           occurred_at?: string
           purchase_amount?: number | null
@@ -807,6 +810,14 @@ export type Database = {
           product_name: string
         }[]
       }
+      import_purchases: {
+        Args: { p_note?: string; p_occurred_on?: string; p_rows: Json }
+        Returns: {
+          batch_id: string
+          movement_count: number
+          total_qty: number
+        }[]
+      }
       import_sales: {
         Args: { p_force?: boolean; p_groups: Json; p_memo?: string }
         Returns: {
@@ -961,6 +972,10 @@ export type Database = {
         Returns: number
       }
       void_product_import: {
+        Args: { p_batch_id: string; p_reason?: string }
+        Returns: number
+      }
+      void_purchase_import: {
         Args: { p_batch_id: string; p_reason?: string }
         Returns: number
       }
