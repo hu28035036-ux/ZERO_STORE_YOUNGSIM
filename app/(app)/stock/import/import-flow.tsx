@@ -17,7 +17,8 @@ import {
   type ProductColumnKey,
   type ProductColumnMap,
 } from './columns'
-import { cellToText, decodeCsvBytes, parseDelimited, type Cell } from '../../sales/import/parse'
+import { cellToText, type Cell } from '../../sales/import/parse'
+import { readTableFile } from '../../sales/import/read-file'
 import { ProductImportPreview } from './preview'
 
 /**
@@ -132,28 +133,14 @@ export function ProductImportFlow({
     setError(null)
     setReading(true)
     try {
-      const lower = file.name.toLowerCase()
-      if (lower.endsWith('.xlsx')) {
-        // 동적 import: CSV 만 쓰는 사람은 엑셀 파서를 한 바이트도 받지 않는다.
-        const { default: readXlsxFile } = await import('read-excel-file/browser')
-        const sheets = await readXlsxFile(file)
-        const usable = sheets
-          .map((s) => ({ name: s.sheet, data: s.data as Cell[][] }))
-          .filter((s) => s.data.length > 0)
-        if (usable.length === 0) {
-          setError('통합문서에 내용이 있는 시트가 없습니다')
-        } else if (usable.length === 1) {
-          enterColumns(file.name, usable[0].data)
-        } else {
-          setFlow({ step: 'sheets', fileName: file.name, sheets: usable })
-        }
-      } else if (lower.endsWith('.xls')) {
-        setError(
-          '.xls(옛 엑셀 형식)는 읽지 못합니다. 엑셀에서 "다른 이름으로 저장" 으로 .xlsx 나 CSV 로 바꿔 주세요',
-        )
+      // 형식 판별·복구는 read-file.ts 가 한다 — 세 임포트 화면이 같은 길을 탄다.
+      const sheets = await readTableFile(file)
+      if (sheets.length === 0) {
+        setError('표에 내용이 없습니다')
+      } else if (sheets.length === 1) {
+        enterColumns(file.name, sheets[0].data)
       } else {
-        const text = decodeCsvBytes(await file.arrayBuffer())
-        enterColumns(file.name, parseDelimited(text))
+        setFlow({ step: 'sheets', fileName: file.name, sheets })
       }
     } catch (e) {
       const detail = e instanceof Error ? e.message : String(e)
@@ -268,10 +255,10 @@ export function ProductImportFlow({
             <span className="text-ink text-sm font-medium">
               {reading ? '읽는 중…' : '파일 고르기'}
             </span>
-            <span className="text-ink-subtle text-xs">.xlsx · .csv · .tsv</span>
+            <span className="text-ink-subtle text-xs">.xlsx · .xls · .csv · .tsv</span>
             <input
               type="file"
-              accept=".xlsx,.csv,.tsv,text/csv,text/tab-separated-values"
+              accept=".xlsx,.xls,.csv,.tsv,.html,.htm,text/csv,text/tab-separated-values,text/html"
               className="sr-only"
               disabled={reading}
               onChange={(e) => {

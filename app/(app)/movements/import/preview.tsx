@@ -38,6 +38,8 @@ type ParsedRow = {
   cleanName: string
   fileQty: number | null
   fileCost: number | null
+  /** VAT 포함 줄 합계. 매입가 열이 없으면 이것 ÷ 파일 수량이 원가가 된다 */
+  fileTotal: number | null
 }
 
 type Row = ParsedRow & {
@@ -69,6 +71,7 @@ function buildRows(cells: Cell[][], map: PurchaseColumnMap): ParsedRow[] {
       cleanName: rawName ? cleanProductName(rawName).name : '',
       fileQty: map.qty != null ? toQuantity(cell('qty')) : null,
       fileCost: map.cost != null ? toMoney(cell('cost')) : null,
+      fileTotal: map.total != null ? toMoney(cell('total')) : null,
     }
   })
 }
@@ -149,12 +152,25 @@ export function PurchaseImportPreview({
     const qty = Number(r.qtyText.replace(/[^\d]/g, '')) || 0
     const upp = r.match?.unitsPerPack ?? 0
     const boxed = interpret === 'auto' && upp >= 2
+    // 파일 단위(EA·박스)당 매입가. 매입가 열이 없으면 합계금액 ÷ 파일 수량 —
+    // 나눗셈은 원본 파일 수량으로 한다. 사람이 표에서 수량을 고쳐도 "단가"가
+    // 따라 변하면 안 된다(합계는 원래 수량에 대한 금액이다).
+    const perFileUnitCost =
+      r.fileCost != null
+        ? r.fileCost
+        : r.fileTotal != null && r.fileQty != null && r.fileQty >= 1
+          ? round2(r.fileTotal / r.fileQty)
+          : null
     return {
       qty: boxed ? qty * upp : qty,
       boxes: boxed ? qty : null,
       perPack: boxed ? upp : null,
       unitCost:
-        r.fileCost == null ? null : boxed ? round2(r.fileCost / upp) : r.fileCost,
+        perFileUnitCost == null
+          ? null
+          : boxed
+            ? round2(perFileUnitCost / upp)
+            : perFileUnitCost,
     }
   }
 
@@ -220,8 +236,8 @@ export function PurchaseImportPreview({
             입고 완료 — {formatQty(done.count)}줄 · {formatQty(done.totalQty)}점
           </p>
           <p className="text-ink-muted text-sm leading-relaxed">
-            <Link href="/movements" className="text-primary underline">
-              입출고 내역
+            <Link href="/movements/history" className="text-primary underline">
+              입출고 기록
             </Link>
             에서 확인하세요. 잘못 올렸다면 이 화면 아래 “파일 입고 이력”에서
             통째로 되돌릴 수 있습니다.

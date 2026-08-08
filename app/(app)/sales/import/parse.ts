@@ -105,6 +105,60 @@ export function parseDelimited(text: string): string[][] {
 }
 
 /**
+ * HTML 로 위장한 표 판별.
+ *
+ * 한국 발주·POS 시스템의 ".xls" 내보내기는 진짜 엑셀이 아니라 <table> HTML 인
+ * 경우가 많다(실제 건별 주문현황 파일이 그랬다). 확장자로 자르면 멀쩡한 표를
+ * 못 받으므로 내용으로 판별한다.
+ */
+export function looksLikeHtmlTable(text: string): boolean {
+  return /<table[\s>]/i.test(text.slice(0, 4096))
+}
+
+/**
+ * HTML <table> → 2차원 배열. 정규식 기반 순수 함수 — DOMParser 는 서버에
+ * 없어서 못 쓴다. 표 안에 표가 든 문서는 다루지 않는다(이 계열 내보내기에는
+ * 없고, 생기면 그 파일로 규칙을 다시 세운다).
+ *
+ * colspan 은 빈 칸으로 펼친다 — 병합된 머리글 줄("주문정보" 같은 묶음 제목)
+ * 아래의 진짜 헤더 줄과 열 번호가 어긋나지 않게 하기 위해서다. 셀 안의
+ * <button> 같은 태그는 글자만 남긴다.
+ */
+export function parseHtmlTable(text: string): string[][] {
+  const rows: string[][] = []
+  const trRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
+  const cellRe = /<t([hd])\b([^>]*)>([\s\S]*?)<\/t\1>/gi
+
+  let tr: RegExpExecArray | null
+  while ((tr = trRe.exec(text))) {
+    const row: string[] = []
+    cellRe.lastIndex = 0
+    let cell: RegExpExecArray | null
+    while ((cell = cellRe.exec(tr[1]))) {
+      const span = Number(/colspan\s*=\s*["']?(\d+)/i.exec(cell[2])?.[1] ?? 1)
+      const value = decodeHtmlText(cell[3])
+      row.push(value)
+      for (let i = 1; i < span; i++) row.push('')
+    }
+    if (row.some((c) => c !== '')) rows.push(row)
+  }
+  return rows
+}
+
+function decodeHtmlText(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#(\d+);/g, (_, n: string) => String.fromCharCode(Number(n)))
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/**
  * 금액 문자열 → 정수 원.
  *
  * "1,600" "1,600원" "₩1,600" "1600.0" 전부 1600 으로. 음수·읽을 수 없는 값은
