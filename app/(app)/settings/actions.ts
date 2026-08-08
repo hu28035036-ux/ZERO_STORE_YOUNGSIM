@@ -188,7 +188,7 @@ export async function createSupplier(
   if (error) return fail(humanize(error, 'supplier'))
 
   revalidatePath('/settings')
-  revalidatePath('/movements/new')
+  revalidatePath('/movements')
   return ok(`“${name}” 을(를) 추가했습니다`)
 }
 
@@ -218,7 +218,7 @@ export async function toggleSupplier(
   if (error) return fail(humanize(error, 'supplier'))
 
   revalidatePath('/settings')
-  revalidatePath('/movements/new')
+  revalidatePath('/movements')
   return ok(next ? '다시 쓰도록 했습니다' : '쓰지 않음으로 바꿨습니다')
 }
 

@@ -10,8 +10,8 @@ import { cn } from '@/lib/cn'
 import { formatQty, formatWon, MOVEMENT_LABEL, todayInSeoul } from '@/lib/constants'
 import type { MovementType } from '@/lib/constants'
 
-import { recordMovement, type MovementState } from '../actions'
-import { ENTRY_TYPES } from '../query'
+import { recordMovement, type MovementState } from './actions'
+import { ENTRY_TYPES } from './query'
 
 export type VariantTarget = {
   variantId: string
@@ -111,7 +111,7 @@ export function MovementForm({
         <CardHeader>
           <CardTitle>{target.productName}</CardTitle>
           <Link
-            href="/movements/new"
+            href="/movements"
             className="text-ink-muted hover:text-ink text-sm whitespace-nowrap"
           >
             다른 상품

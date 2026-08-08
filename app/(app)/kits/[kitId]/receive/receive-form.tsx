@@ -94,7 +94,7 @@ export function ReceiveForm({
             <Link href="/kits" className={buttonClass('secondary')}>
               박스 목록
             </Link>
-            <Link href="/movements" className={buttonClass('primary')}>
+            <Link href="/movements/history" className={buttonClass('primary')}>
               입출고 내역 보기
             </Link>
           </div>

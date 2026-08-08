@@ -82,7 +82,9 @@ export function movementHref(
   if (next.to) params.set('to', next.to)
   if (next.page > 0) params.set('page', String(next.page))
   const qs = params.toString()
-  return qs ? `/movements?${qs}` : '/movements'
+  // 기록 목록은 /movements/history 다 — /movements 는 등록 화면이 차지한다
+  // ("등록이 메인, 기록은 보고 싶을 때" — 2026-08-08 사용자 결정).
+  return qs ? `/movements/history?${qs}` : '/movements/history'
 }
 
 /**

@@ -1,65 +1,90 @@
 import Link from 'next/link'
-import { FileUp, Plus, X } from 'lucide-react'
+import { Boxes, ChevronRight, FileUp, ScrollText, Search } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
-import { likePattern } from '@/lib/search'
-import { getDevice } from '@/lib/server-device'
+import { likePattern, productSearchFilter } from '@/lib/search'
 import { createClient } from '@/lib/supabase/server'
 
-import { MovementCards } from './movement-cards'
-import { MovementTable } from './movement-table'
-import { MovementToolbar } from './movement-toolbar'
-import {
-  kstDayEnd,
-  kstDayStart,
-  LIST_LIMIT,
-  movementHref,
-  parseMovementQuery,
-  type MovementRow,
-} from './query'
+import { MovementForm, type SupplierOption, type VariantTarget } from './movement-form'
+import { QuickList } from './quick-list'
+import type { QuickTarget } from './quick-row'
+import { ScanSearchButton } from './scan-search-button'
 
 export const metadata = { title: '입출고' }
+
+/**
+ * 입출고의 메인 = 등록 화면. 기록 목록은 /movements/history 다.
+ *
+ * 원래는 목록이 메인이고 등록이 한 단계 아래였는데, 실제 사용은 등록이
+ * 압도적이라("기록은 보고 싶을 때만") 자리를 맞바꿨다 — 2026-08-08 사용자
+ * 결정. nav 의 "입출고"를 누르면 바로 찾기 칸이 나온다.
+ */
+
+const SEARCH_LIMIT = 20
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export default async function MovementsPage({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
-  const query = parseMovementQuery(await searchParams)
+  const sp = await searchParams
+  const q = (typeof sp.q === 'string' ? sp.q : '').trim().slice(0, 40)
+  const wanted = typeof sp.variant === 'string' && UUID.test(sp.variant) ? sp.variant : null
+
   const supabase = await createClient()
 
-  const offset = query.page * LIST_LIMIT
-
-  let list = supabase
-    .from('v_movements')
+  // 고른 변형이 있으면 그것만, 없으면 검색 결과를 받는다.
+  let lookup = supabase
+    .from('v_variant_stock')
     .select('*')
-    .order('occurred_at', { ascending: false })
-    // 같은 시각에 여러 건이 들어가면 정렬이 흔들려 페이지를 넘길 때 같은 행이
-    // 두 번 나오거나 통째로 빠진다. id 로 못을 박는다.
-    .order('id', { ascending: false })
-    // 한 줄 더 받아서 다음 쪽이 있는지 본다. count 쿼리를 따로 치는 것보다 싸다.
-    .range(offset, offset + LIST_LIMIT)
+    .eq('is_active', true)
+    .eq('product_active', true)
+    .order('product_name')
+    .order('option_label', { nullsFirst: true })
+    .limit(SEARCH_LIMIT)
 
-  if (query.type !== 'all') list = list.eq('type', query.type)
-  if (query.variantId) list = list.eq('variant_id', query.variantId)
-  const pattern = likePattern(query.q)
-  if (pattern) {
-    // lib/search.ts 의 productSearchFilter 는 v_variant_stock 전용이다 —
-    // pos_name·barcode 열이 이 뷰에는 없어서 그대로 쓰면 400 이 난다.
-    list = list.or(
-      `product_name.ilike.${pattern},option_label.ilike.${pattern},sku.ilike.${pattern}`,
-    )
+  if (wanted) {
+    lookup = lookup.eq('variant_id', wanted)
+  } else {
+    const pattern = likePattern(q)
+    // 검색어가 없으면 최근에 손댄 것부터 몇 개 보여준다. 빈 화면보다 낫다.
+    if (pattern) lookup = lookup.or(productSearchFilter(pattern))
   }
-  if (query.from) list = list.gte('occurred_at', kstDayStart(query.from))
-  if (query.to) list = list.lt('occurred_at', kstDayEnd(query.to))
 
-  const [device, result] = await Promise.all([getDevice(), list])
+  const [found, suppliers] = await Promise.all([
+    lookup,
+    supabase
+      .from('suppliers')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name'),
+  ])
 
-  const fetched = (result.data ?? []) as MovementRow[]
-  const hasNext = fetched.length > LIST_LIMIT
-  const rows = hasNext ? fetched.slice(0, LIST_LIMIT) : fetched
-  const filtered =
-    query.type !== 'all' || Boolean(query.from || query.to) || Boolean(pattern)
+  const rows = found.data ?? []
+
+  // 큰 폼은 ?variant= 로 콕 집어 들어왔을 때만 연다. 검색 결과의 줄 자체가
+  // 빠른 등록 폼이라, 한 건일 때도 목록에 남는 쪽이 손이 덜 간다.
+  const target = wanted ? rows[0] : null
+
+  // 스캔·검색이 한 건으로 떨어졌으면 그 줄 수량 칸이 포커스를 가진다. 이때는
+  // 검색칸의 autoFocus 를 꺼야 한다 — 둘 다 걸면 검색칸이 이긴다(실제로 그랬다).
+  const single = rows.length === 1 && Boolean(q)
+
+  const supplierOptions: SupplierOption[] = (suppliers.data ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+  }))
+
+  const targets: QuickTarget[] = rows.map((row) => ({
+    variantId: row.variant_id!,
+    productName: row.product_name ?? '',
+    optionLabel: row.option_label,
+    stockQty: row.stock_qty ?? 0,
+    threshold: row.low_stock_threshold ?? 0,
+    salePrice: Number(row.sale_price ?? 0),
+    unit: row.unit || '개',
+  }))
 
   return (
     <div className="flex flex-col gap-4">
@@ -67,92 +92,112 @@ export default async function MovementsPage({
         <h1 className="text-ink text-lg font-semibold tracking-tight">입출고</h1>
         <div className="flex items-center gap-2">
           <Link
+            href="/movements/history"
+            className="border-border-strong text-ink hover:bg-surface-sunken h-touch inline-flex items-center justify-center gap-2 rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors select-none"
+          >
+            <ScrollText size={18} aria-hidden />
+            기록
+          </Link>
+          <Link
             href="/movements/import"
             className="border-border-strong text-ink hover:bg-surface-sunken h-touch inline-flex items-center justify-center gap-2 rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors select-none"
           >
             <FileUp size={18} aria-hidden />
             파일로 입고
           </Link>
-          <Link
-            href="/movements/new"
-            className="bg-primary text-primary-ink hover:bg-primary-hover h-touch inline-flex items-center justify-center gap-2 rounded-lg px-4 text-[0.9375rem] font-medium transition-colors select-none"
-          >
-            <Plus size={18} aria-hidden />
-            등록
-          </Link>
         </div>
       </div>
 
-      {query.variantId ? (
-        <Card className="flex items-center justify-between gap-3 px-4 py-3">
-          <p className="text-ink-muted text-sm">
-            <span className="text-ink font-medium">
-              {rows[0]?.product_name ?? '선택한 상품'}
-            </span>
-            {rows[0]?.option_label ? ` · ${rows[0].option_label}` : ''} 의 내역만 보고
-            있습니다.
-          </p>
-          <Link
-            href={movementHref(query, { variantId: null, page: 0 })}
-            className="text-ink-muted hover:text-ink inline-flex items-center gap-1 text-sm whitespace-nowrap"
-          >
-            <X size={14} aria-hidden />
-            해제
-          </Link>
-        </Card>
-      ) : null}
-
-      <MovementToolbar query={query} />
-
-      {result.error ? (
-        <Card className="p-5">
-          <p className="text-danger text-sm font-medium">내역을 불러오지 못했습니다.</p>
-          <p className="text-ink-muted mt-1.5 text-sm">{result.error.message}</p>
-        </Card>
-      ) : rows.length === 0 ? (
-        <Card className="p-5">
-          <p className="text-ink text-sm font-medium">
-            {filtered || query.variantId
-              ? '조건에 맞는 내역이 없습니다.'
-              : '아직 입출고 내역이 없습니다.'}
-          </p>
-          <p className="text-ink-muted mt-1.5 text-sm">
-            {filtered || query.variantId
-              ? '검색어·기간·종류를 바꿔 보세요.'
-              : '위쪽 “등록”으로 입고를 넣으면 여기에 쌓입니다. 상품 등록 때 넣은 기초 재고도 입고로 남습니다.'}
-          </p>
-        </Card>
-      ) : device === 'mobile' ? (
-        <MovementCards rows={rows} />
+      {target ? (
+        <MovementForm
+          target={
+            {
+              variantId: target.variant_id!,
+              productName: target.product_name ?? '',
+              optionLabel: target.option_label,
+              stockQty: target.stock_qty ?? 0,
+              costPrice: target.cost_price ?? 0,
+              unit: target.unit ?? '개',
+              unitsPerPack: target.units_per_pack,
+              purchaseUnitName: target.purchase_unit_name,
+            } satisfies VariantTarget
+          }
+          suppliers={supplierOptions}
+        />
       ) : (
-        <MovementTable rows={rows} />
-      )}
+        <>
+          {/* 한 박스에 여러 맛이 섞여 오는 상품은 여기서 한 줄씩 넣으면 열 번을
+              반복해야 한다. 그 경로가 따로 있다는 것을 이 자리에서 알려준다 —
+              찾기 칸을 지나친 뒤에는 다시 안 올라온다. */}
+          <Link
+            href="/kits"
+            className="border-border-base hover:border-border-strong hover:bg-surface-sunken flex items-center gap-3 rounded-card border p-4 transition-colors"
+          >
+            <Boxes className="text-ink-muted h-5 w-5 shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="text-ink block text-sm font-medium">
+                한 박스에 여러 맛이 섞여 왔나요?
+              </span>
+              <span className="text-ink-subtle block text-xs">
+                곤약젤리 버라이어티팩처럼 섞여 오는 상품은 박스 묶음으로 한 번에 넣습니다
+              </span>
+            </span>
+            <ChevronRight className="text-ink-subtle h-4 w-4 shrink-0" aria-hidden />
+          </Link>
 
-      {rows.length > 0 && (query.page > 0 || hasNext) ? (
-        <div className="flex items-center justify-between gap-3">
-          {query.page > 0 ? (
-            <Link
-              href={movementHref(query, { page: query.page - 1 })}
-              className="bg-surface text-ink border-border-strong hover:bg-surface-sunken h-touch inline-flex items-center rounded-lg border px-4 text-sm font-medium"
-            >
-              이전
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span className="text-ink-muted text-sm">{query.page + 1}쪽</span>
-          {hasNext ? (
-            <Link
-              href={movementHref(query, { page: query.page + 1 })}
-              className="bg-surface text-ink border-border-strong hover:bg-surface-sunken h-touch inline-flex items-center rounded-lg border px-4 text-sm font-medium"
-            >
-              다음
-            </Link>
-          ) : (
-            <span />
-          )}
-        </div>
-      ) : null}
+          <Card className="p-4">
+            <form action="/movements" className="flex gap-2">
+              {/* min-w-0: 버튼이 두 개(찾기 + 카메라)로 늘면서 flex 기본 최소폭이
+                  콘텐츠 크기인 채로 있으면 좁은 화면에서 이 칸이 밀려 잘릴 수 있다
+                  (커밋 ac46d4b 와 같은 종류의 사고). 자리가 모자라면 입력칸이
+                  줄어들게 한다. */}
+              <div className="relative min-w-0 flex-1">
+                <Search
+                  size={18}
+                  aria-hidden
+                  className="text-ink-subtle pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+                />
+                <input
+                  type="search"
+                  name="q"
+                  defaultValue={q}
+                  // 스캐너는 코드를 치고 엔터를 누른다. 다만 결과가 한 건으로
+                  // 떨어진 화면에서는 그 줄의 수량 칸이 포커스를 가져간다.
+                  autoFocus={!single}
+                  placeholder="상품명 · 바코드로 찾기"
+                  aria-label="상품 찾기"
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-touch w-full rounded-lg border pr-3 pl-10 text-base outline-none"
+                />
+              </div>
+              <button
+                type="submit"
+                className="bg-primary text-primary-ink hover:bg-primary-hover h-touch inline-flex items-center rounded-lg px-4 text-[0.9375rem] font-medium transition-colors"
+              >
+                찾기
+              </button>
+              {/* type="button" 이라 폼 제출을 가로채지 않는다 — 클릭하면 카메라
+                  오버레이만 열리고, 실제 조회는 스캔 후 ?q= 이동으로 일어난다. */}
+              <ScanSearchButton />
+            </form>
+          </Card>
+
+          {rows.length > 0 || q ? (
+            <p className="text-ink-muted text-sm">
+              줄에서 바로 수량을 넣어 등록하세요. 단가·거래처·박스·지난 날짜는
+              “자세히”에서, 계속 볼 상품은 “고정”에 체크하세요.
+            </p>
+          ) : null}
+
+          <QuickList
+            rows={targets}
+            q={q}
+            hitLimit={rows.length === SEARCH_LIMIT}
+            searchLimit={SEARCH_LIMIT}
+          />
+        </>
+      )}
     </div>
   )
 }

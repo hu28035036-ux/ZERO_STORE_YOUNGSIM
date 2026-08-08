@@ -40,7 +40,7 @@ export function MovementToolbar({ query }: { query: MovementQuery }) {
         })}
       </div>
 
-      <form action="/movements" className="flex flex-wrap items-end gap-2">
+      <form action="/movements/history" className="flex flex-wrap items-end gap-2">
         {query.type !== 'all' ? (
           <input type="hidden" name="type" value={query.type} />
         ) : null}

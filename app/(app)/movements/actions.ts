@@ -194,9 +194,12 @@ export async function recordMovement(
   const result = await applyMovement(formData)
   if ('error' in result) return result
 
-  revalidatePath('/movements')
+  // 'layout' 이라 등록 허브·기록·파일 화면이 같이 갱신된다.
+  revalidatePath('/movements', 'layout')
   revalidatePath('/stock')
-  redirect('/movements')
+  // 큰 폼은 날짜·단가까지 넣는 신중한 등록이라, 남긴 전표를 눈으로 확인하는
+  // 자리(기록)로 보낸다. 연속 등록은 빠른 등록(허브)이 맡는다.
+  redirect('/movements/history')
 }
 
 export type QuickState = { error: string } | { ok: true; after: number } | null

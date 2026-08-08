@@ -36,7 +36,7 @@ export function ScanSearchButton() {
       </Button>
       <BarcodeScanner
         open={open}
-        onDetect={(code) => router.replace(`/movements/new?q=${encodeURIComponent(code)}`)}
+        onDetect={(code) => router.replace(`/movements?q=${encodeURIComponent(code)}`)}
         onClose={() => setOpen(false)}
       />
     </>
