@@ -11,7 +11,7 @@ import { NumberInput } from '@/components/ui/field'
 import { cn } from '@/lib/cn'
 import { formatQty, formatWon, MOVEMENT_LABEL } from '@/lib/constants'
 
-import { quickMovement, type QuickState } from '../actions'
+import { quickMovement, type QuickState } from './actions'
 
 /**
  * 검색 결과 한 줄에서 바로 등록하는 빠른 폼.
@@ -43,10 +43,18 @@ function toInt(value: string): number {
 export function QuickRow({
   target,
   autoFocus = false,
+  pinned = false,
+  onTogglePin,
+  onApplied,
 }: {
   target: QuickTarget
   /** 검색 결과가 이 한 건뿐일 때(스캔 직후 등) 수량 칸에 바로 커서를 준다 */
   autoFocus?: boolean
+  /** 체크하면 다음 검색에도 목록 위에 남는다 (quick-list.tsx 가 들고 있다) */
+  pinned?: boolean
+  onTogglePin?: () => void
+  /** 등록 성공 시 잔여 재고 통지 — 고정 줄의 스냅샷을 최신으로 유지한다 */
+  onApplied?: (after: number) => void
 }) {
   const [type, setType] = useState<QuickType>('purchase')
   const [qty, setQty] = useState('')
@@ -63,10 +71,11 @@ export function QuickRow({
     if (state && 'ok' in state && doneRef.current !== state) {
       doneRef.current = state
       setQty('')
+      onApplied?.(state.after)
       // 서버 목록을 다시 받아 재고 배지가 방금 등록을 반영하게 한다
       router.refresh()
     }
-  }, [state, router])
+  }, [state, router, onApplied])
 
   const n = toInt(qty)
   const filled = qty.trim() !== ''
@@ -93,10 +102,23 @@ export function QuickRow({
             {formatWon(target.salePrice)}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2.5">
           <StockBadge qty={target.stockQty} threshold={target.threshold} unit={target.unit} />
+          {onTogglePin ? (
+            // 검색할 때마다 결과가 바뀌어 이전에 보던 상품이 사라진다는 리포트.
+            // 체크한 줄은 quick-list 가 sessionStorage 에 들고 있어 안 사라진다.
+            <label className="text-ink-muted hover:text-ink flex cursor-pointer items-center gap-1 text-sm select-none">
+              <input
+                type="checkbox"
+                checked={pinned}
+                onChange={onTogglePin}
+                className="accent-primary size-4"
+              />
+              고정
+            </label>
+          ) : null}
           <Link
-            href={`/movements/new?variant=${target.variantId}`}
+            href={`/movements?variant=${target.variantId}`}
             className="text-ink-muted hover:text-ink text-sm whitespace-nowrap underline-offset-2 hover:underline"
           >
             자세히
