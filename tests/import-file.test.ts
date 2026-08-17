@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import { looksLikeHtmlTable, parseHtmlTable } from '../app/(app)/sales/import/parse.ts'
 import { repairStreamedZip } from '../app/(app)/sales/import/zip-repair.ts'
 import { guessMapping } from '../app/(app)/movements/import/columns.ts'
+import { nameKey } from '../app/(app)/movements/import/name-key.ts'
 
 // ---------------------------------------------------------------------------
 // HTML 표 (".xls" 위장) — 실제 건별 주문현황 파일의 구조를 줄여서 고정
@@ -125,4 +126,34 @@ test('주문내역서: 코드·이름·주문량·합계금액이 붙고, VAT �
   // '단가' 는 VAT 제외라 원가로 잇지 않는다 (0018 의 매입(vat-) 사고와 같은 함정).
   // '주문금액'(단가×수량, VAT 제외)도 총액으로 잇지 않는다.
   assert.equal(map.cost, undefined)
+})
+
+// ---------------------------------------------------------------------------
+// 이름 키 — 발주 사이트마다 다른 띄어쓰기를 같은 것으로 본다
+// ---------------------------------------------------------------------------
+
+test('띄어쓰기만 다른 이름은 같은 키가 된다 — 실물 3쌍', () => {
+  const pairs: [string, string][] = [
+    ['위시어 리얼크리스피프로틴바버터쿠키', '위시어 리얼크리스피 프로틴바 버터쿠키'],
+    ['미트리 간편한닭가슴살볶음밥차돌깍두기', '미트리 간편한 닭가슴살 볶음밥 차돌깍두기'],
+    ['웅진 초록매실제로', '웅진 초록매실 제로'],
+  ]
+  for (const [file, ours] of pairs) {
+    assert.equal(nameKey(file), nameKey(ours), `${file} ↔ ${ours}`)
+  }
+})
+
+test('전각 공백·줄바꿈·앞뒤 공백도 공백이다 — 엑셀에서 실제로 섞여 온다', () => {
+  assert.equal(nameKey('  웅진　초록매실\n제로 '), '웅진초록매실제로')
+})
+
+test('글자가 다르면 키도 다르다 — 공백만 뗀다', () => {
+  // 본사 시트가 어묵탕·우동만 '빼빼' 로 적어서 생긴 어긋남. 공백을 떼도 안 붙는
+  // 것이 맞다 — 붙이려고 규칙을 더 뭉개면 엉뚱한 상품에 입고가 들어간다.
+  assert.notEqual(
+    nameKey('빼빼곤약 바로먹는 발효곤약 어묵탕'),
+    nameKey('빼빼 바로먹는 발효곤약 어묵탕'),
+  )
+  // 맛이 우리 쪽에만 있는 경우도 붙으면 안 된다.
+  assert.notEqual(nameKey('농심 누들핏'), nameKey('농심 누들핏 육개장사발면맛'))
 })
