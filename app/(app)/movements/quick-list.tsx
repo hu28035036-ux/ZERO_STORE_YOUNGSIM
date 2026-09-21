@@ -91,9 +91,9 @@ export function QuickList({
   return (
     <div className="flex flex-col gap-4">
       {pins.length > 0 ? (
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-3">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="text-ink text-sm font-semibold">고정한 상품 {pins.length}</h2>
+            <h2 className="text-ink-muted px-1 text-xs font-semibold tracking-wide">고정한 상품 {pins.length}</h2>
             <button
               type="button"
               onClick={() => setPins([])}
@@ -102,7 +102,7 @@ export function QuickList({
               모두 해제
             </button>
           </div>
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-3">
             {displayPins.map((p) => (
               <li key={p.variantId}>
                 <QuickRow
@@ -136,11 +136,11 @@ export function QuickList({
           </p>
         </Card>
       ) : results.length > 0 ? (
-        <section className="flex flex-col gap-2">
+        <section className="flex flex-col gap-3">
           {pins.length > 0 ? (
-            <h2 className="text-ink text-sm font-semibold">검색 결과</h2>
+            <h2 className="text-ink-muted px-1 text-xs font-semibold tracking-wide">검색 결과</h2>
           ) : null}
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-3">
             {results.map((row) => (
               <li key={row.variantId}>
                 <QuickRow

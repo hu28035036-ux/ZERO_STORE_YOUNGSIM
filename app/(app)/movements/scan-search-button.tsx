@@ -31,6 +31,7 @@ export function ScanSearchButton() {
         variant="secondary"
         aria-label="카메라로 바코드 찾기"
         onClick={() => setOpen(true)}
+        className="h-12 w-12 rounded-xl px-0"
       >
         <Camera size={18} aria-hidden />
       </Button>

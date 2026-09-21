@@ -22,6 +22,14 @@ const SIZE: Record<Size, string> = {
   lg: 'h-touch-lg px-6 text-base gap-2',
 }
 
+/**
+ * 누를 때의 반응. 색만 바뀜면 터치 화면에서는 "눌렸나?"가 불분명해서(손가락이 버튼을
+ * 가린다) 살짝 작아지게 한다. 0.97 은 눈에 띄되 옵하지 않은 값 — 더 작으면 버튼이
+ * 도망가는 것처럼 보인다. 포인터 없는 기기를 위해 범위를 묻지 않고 항상 준다.
+ */
+const PRESS =
+  'transition-[transform,background-color,opacity] duration-150 select-none active:scale-[0.97]'
+
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: Variant
   size?: Size
@@ -43,7 +51,7 @@ export function buttonClass(
 ) {
   return cn(
     'inline-flex items-center justify-center rounded-lg font-medium',
-    'transition-colors select-none',
+    PRESS,
     VARIANT[variant],
     SIZE[size],
     full && 'w-full',
@@ -66,7 +74,7 @@ export function Button({
       type={type}
       className={cn(
         'inline-flex items-center justify-center rounded-lg font-medium',
-        'transition-colors select-none',
+        PRESS,
         'disabled:pointer-events-none disabled:opacity-50',
         VARIANT[variant],
         SIZE[size],

@@ -145,7 +145,7 @@ export default async function MovementsPage({
             <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
           </Link>
 
-          <Card className="p-5">
+          <Card className="p-4">
             <form action="/movements" className="flex gap-2">
               {/* min-w-0: 버튼이 두 개(찾기 + 카메라)로 늘면서 flex 기본 최소폭이
                   콘텐츠 크기인 채로 있으면 좁은 화면에서 이 칸이 밀려 잘릴 수 있다
@@ -155,7 +155,7 @@ export default async function MovementsPage({
                 <Search
                   size={18}
                   aria-hidden
-                  className="text-ink-subtle pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+                  className="text-ink-subtle pointer-events-none absolute top-1/2 left-4 -translate-y-1/2"
                 />
                 <input
                   type="search"
@@ -168,12 +168,12 @@ export default async function MovementsPage({
                   aria-label="상품 찾기"
                   autoCapitalize="none"
                   autoComplete="off"
-                  className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-touch w-full rounded-lg border pr-3 pl-10 text-base outline-none"
+                  className="bg-surface-sunken text-ink placeholder:text-ink-subtle focus:border-primary focus:bg-surface h-12 w-full rounded-xl border border-transparent pr-3 pl-11 text-base outline-none transition-colors"
                 />
               </div>
               <button
                 type="submit"
-                className="bg-primary text-primary-ink hover:bg-primary-hover h-touch inline-flex items-center rounded-lg px-4 text-[0.9375rem] font-medium transition-colors"
+                className="bg-primary text-primary-ink hover:bg-primary-hover inline-flex h-12 items-center rounded-xl px-5 text-[0.9375rem] font-medium transition-[background-color,transform] duration-150 select-none active:scale-[0.97]"
               >
                 찾기
               </button>
@@ -184,7 +184,7 @@ export default async function MovementsPage({
           </Card>
 
           {rows.length > 0 || q ? (
-            <p className="text-ink-muted text-sm">
+            <p className="text-ink-subtle px-1 text-xs">
               줄에서 바로 수량을 넣어 등록하세요. 단가·거래처·박스·지난 날짜는
               “자세히”에서, 계속 볼 상품은 “고정”에 체크하세요.
             </p>
