@@ -28,8 +28,11 @@ function Empty({ text }: { text: string }) {
   return <p className="text-ink-muted py-6 text-center text-sm">{text}</p>
 }
 
-const TH = 'px-3 py-2 font-medium'
-const TD = 'px-3 py-2.5'
+// whitespace-nowrap: "매출 비중"처럼 두 단어 머리글이 좋은 열에서 두 줄로 꺾이면 머리줄 높이가
+// 표마다 달라진다 (2열 그리드에서 옆 표와 줄이 어긋나 보였다).
+const TH = 'px-4 py-3 font-medium whitespace-nowrap'
+const TD = 'px-4 py-3.5 text-sm'
+const TR = 'border-border-base border-b last:border-0 hover:bg-surface-sunken/60'
 
 export function TopProductsTable({ rows }: { rows: TopProduct[] }) {
   const max = rows.reduce((m, r) => Math.max(m, Number(r.revenue ?? 0)), 0)
@@ -46,9 +49,9 @@ export function TopProductsTable({ rows }: { rows: TopProduct[] }) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[38rem] text-sm">
-              <thead className="border-border-base text-ink-muted border-b text-xs">
+              <thead className="bg-surface-sunken text-ink-muted text-xs font-medium">
                 <tr>
-                  <th scope="col" className={cn(TH, 'text-left')}>
+                  <th scope="col" className={cn(TH, 'pl-5 text-left')}>
                     상품
                   </th>
                   <th scope="col" className={cn(TH, 'w-28 text-left')}>
@@ -63,15 +66,15 @@ export function TopProductsTable({ rows }: { rows: TopProduct[] }) {
                   <th scope="col" className={cn(TH, 'text-right')}>
                     마진
                   </th>
-                  <th scope="col" className={cn(TH, 'text-right')}>
+                  <th scope="col" className={cn(TH, 'pr-5 text-right')}>
                     마진율
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.variant_id} className="border-border-base border-b last:border-0">
-                    <td className={TD}>
+                  <tr key={r.variant_id} className={TR}>
+                    <td className={cn(TD, 'pl-5')}>
                       <span className="text-ink font-medium">{r.product_name}</span>
                       {r.option_label ? (
                         <span className="text-ink-muted"> · {r.option_label}</span>
@@ -95,7 +98,7 @@ export function TopProductsTable({ rows }: { rows: TopProduct[] }) {
                     >
                       {formatWon(r.margin)}
                     </td>
-                    <td className={cn(TD, 'text-ink-muted text-right')}>
+                    <td className={cn(TD, 'pr-5 text-ink-muted text-right')}>
                       {r.margin_rate}%
                     </td>
                   </tr>
@@ -123,9 +126,9 @@ export function CategoryTable({ rows }: { rows: CategoryStat[] }) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[34rem] text-sm">
-              <thead className="border-border-base text-ink-muted border-b text-xs">
+              <thead className="bg-surface-sunken text-ink-muted text-xs font-medium">
                 <tr>
-                  <th scope="col" className={cn(TH, 'text-left')}>
+                  <th scope="col" className={cn(TH, 'pl-5 text-left')}>
                     카테고리
                   </th>
                   <th scope="col" className={cn(TH, 'w-28 text-left')}>
@@ -137,18 +140,15 @@ export function CategoryTable({ rows }: { rows: CategoryStat[] }) {
                   <th scope="col" className={cn(TH, 'text-right')}>
                     매출
                   </th>
-                  <th scope="col" className={cn(TH, 'text-right')}>
+                  <th scope="col" className={cn(TH, 'pr-5 text-right')}>
                     마진율
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr
-                    key={r.category_id ?? 'none'}
-                    className="border-border-base border-b last:border-0"
-                  >
-                    <td className={cn(TD, 'text-ink font-medium')}>{r.category_name}</td>
+                  <tr key={r.category_id ?? 'none'} className={TR}>
+                    <td className={cn(TD, 'pl-5 text-ink font-medium')}>{r.category_name}</td>
                     <td className={TD}>
                       <Bar value={Number(r.revenue ?? 0)} max={max} />
                     </td>
@@ -156,7 +156,7 @@ export function CategoryTable({ rows }: { rows: CategoryStat[] }) {
                       {r.revenue_share}%
                     </td>
                     <td className={cn(TD, 'text-ink text-right')}>{formatWon(r.revenue)}</td>
-                    <td className={cn(TD, 'text-ink-muted text-right')}>
+                    <td className={cn(TD, 'pr-5 text-ink-muted text-right')}>
                       {r.margin_rate}%
                     </td>
                   </tr>
@@ -184,9 +184,9 @@ export function SupplierTable({ rows }: { rows: SupplierStat[] }) {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[30rem] text-sm">
-              <thead className="border-border-base text-ink-muted border-b text-xs">
+              <thead className="bg-surface-sunken text-ink-muted text-xs font-medium">
                 <tr>
-                  <th scope="col" className={cn(TH, 'text-left')}>
+                  <th scope="col" className={cn(TH, 'pl-5 text-left')}>
                     거래처
                   </th>
                   <th scope="col" className={cn(TH, 'w-28 text-left')}>
@@ -198,18 +198,15 @@ export function SupplierTable({ rows }: { rows: SupplierStat[] }) {
                   <th scope="col" className={cn(TH, 'text-right')}>
                     수량
                   </th>
-                  <th scope="col" className={cn(TH, 'text-right')}>
+                  <th scope="col" className={cn(TH, 'pr-5 text-right')}>
                     매입액
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr
-                    key={r.supplier_id ?? 'none'}
-                    className="border-border-base border-b last:border-0"
-                  >
-                    <td className={cn(TD, 'text-ink font-medium')}>{r.supplier_name}</td>
+                  <tr key={r.supplier_id ?? 'none'} className={TR}>
+                    <td className={cn(TD, 'pl-5 text-ink font-medium')}>{r.supplier_name}</td>
                     <td className={TD}>
                       <Bar value={Number(r.purchase_amount ?? 0)} max={max} />
                     </td>
@@ -219,7 +216,7 @@ export function SupplierTable({ rows }: { rows: SupplierStat[] }) {
                     <td className={cn(TD, 'text-ink-muted text-right')}>
                       {formatQty(Number(r.qty_purchased ?? 0))}
                     </td>
-                    <td className={cn(TD, 'text-ink text-right')}>
+                    <td className={cn(TD, 'pr-5 text-ink text-right')}>
                       {formatWon(r.purchase_amount)}
                     </td>
                   </tr>
@@ -249,9 +246,9 @@ export function TurnoverTable({ rows }: { rows: TurnoverStat[] }) {
           <>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[32rem] text-sm">
-                <thead className="border-border-base text-ink-muted border-b text-xs">
+                <thead className="bg-surface-sunken text-ink-muted text-xs font-medium">
                   <tr>
-                    <th scope="col" className={cn(TH, 'text-left')}>
+                    <th scope="col" className={cn(TH, 'pl-5 text-left')}>
                       카테고리
                     </th>
                     <th scope="col" className={cn(TH, 'text-right')}>
@@ -263,18 +260,15 @@ export function TurnoverTable({ rows }: { rows: TurnoverStat[] }) {
                     <th scope="col" className={cn(TH, 'text-right')}>
                       연 회전
                     </th>
-                    <th scope="col" className={cn(TH, 'text-right')}>
+                    <th scope="col" className={cn(TH, 'pr-5 text-right')}>
                       소진 예상
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr
-                      key={r.category_id ?? 'none'}
-                      className="border-border-base border-b last:border-0"
-                    >
-                      <td className={cn(TD, 'text-ink font-medium')}>
+                    <tr key={r.category_id ?? 'none'} className={TR}>
+                      <td className={cn(TD, 'pl-5 text-ink font-medium')}>
                         {r.category_name}
                       </td>
                       <td className={cn(TD, 'text-ink-muted text-right')}>
@@ -286,7 +280,7 @@ export function TurnoverTable({ rows }: { rows: TurnoverStat[] }) {
                       <td className={cn(TD, 'text-ink text-right')}>
                         {Number(r.turnover_annual ?? 0).toFixed(2)}회
                       </td>
-                      <td className={cn(TD, 'text-ink-muted text-right')}>
+                      <td className={cn(TD, 'pr-5 text-ink-muted text-right')}>
                         {r.days_of_stock === null ? '—' : `${r.days_of_stock}일`}
                       </td>
                     </tr>

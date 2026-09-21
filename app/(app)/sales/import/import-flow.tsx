@@ -356,7 +356,7 @@ function ColumnPicker({
   )
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
           <CardTitle>열 지정</CardTitle>

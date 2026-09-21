@@ -308,3 +308,81 @@ export async function updateProduct(
   // 확인하는 흐름이 자연스럽고, 여러 변형을 연달아 고치는 일도 잦다.
   return ok('저장했습니다')
 }
+
+// ---------------------------------------------------------------------------
+// 삭제(숨기기) · 되살리기
+//
+// 폼 액션(createProduct/updateProduct)과 달리 폼 제출이 아니라 버튼 클릭에서 직접
+// 호출한다 (useActionState 의 (prev, formData) 시그니처가 아니다). 호출부는
+// CategorySelect 의 createCategoryInline 과 같은 결 — 결과를 직접 받아 로컬 상태(2단계
+// 확인 안밀린 버튼 · 선택 삭제 바)를 직접 쓴다.
+// ---------------------------------------------------------------------------
+
+export type ArchiveState = { ok: true; count: number } | { ok: false; error: string }
+
+export async function archiveProduct(
+  productId: string,
+  zeroStock = true,
+): Promise<ArchiveState> {
+  await requireUser()
+
+  const parsed = z.uuid().safeParse(productId)
+  if (!parsed.success) return { ok: false, error: '잘못된 상품입니다' }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('archive_product', {
+    p_product_id: parsed.data,
+    p_zero_stock: zeroStock,
+  })
+
+  if (error) return { ok: false, error: error.message }
+
+  revalidatePath('/stock')
+  revalidatePath('/')
+  revalidatePath('/stats')
+  return { ok: true, count: 1 }
+}
+
+export async function archiveProducts(
+  productIds: string[],
+  zeroStock = true,
+): Promise<ArchiveState> {
+  await requireUser()
+
+  const parsed = z.array(z.uuid()).min(1).safeParse(productIds)
+  if (!parsed.success) return { ok: false, error: '삭제할 상품을 고르세요' }
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('archive_products', {
+    p_product_ids: parsed.data,
+    p_zero_stock: zeroStock,
+  })
+
+  if (error) return { ok: false, error: error.message }
+
+  revalidatePath('/stock')
+  revalidatePath('/')
+  revalidatePath('/stats')
+  return { ok: true, count: data ?? parsed.data.length }
+}
+
+export type RestoreState = { ok: true } | { ok: false; error: string }
+
+export async function restoreProduct(productId: string): Promise<RestoreState> {
+  await requireUser()
+
+  const parsed = z.uuid().safeParse(productId)
+  if (!parsed.success) return { ok: false, error: '잘못된 상품입니다' }
+
+  const supabase = await createClient()
+  const { error } = await supabase.rpc('restore_product', {
+    p_product_id: parsed.data,
+  })
+
+  if (error) return { ok: false, error: error.message }
+
+  revalidatePath('/stock')
+  revalidatePath('/')
+  revalidatePath('/stats')
+  return { ok: true }
+}

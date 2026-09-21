@@ -14,6 +14,7 @@ import { updateProduct } from '../../actions'
 import { type CategoryOption } from '../../categories'
 import { CategorySelect } from '../../category-select'
 import { Cell, marginLine, toCost, toInt } from '../../variant-fields'
+import { DeleteProductCard } from './delete-card'
 
 export type EditVariant = {
   variantId: string
@@ -43,6 +44,8 @@ export function EditProductForm({
   categories,
   channels,
   initialVariants,
+  isActive,
+  stockSum,
 }: {
   productId: string
   initialName: string
@@ -56,6 +59,10 @@ export function EditProductForm({
   /** 기존 상품들이 쓰는 유통방식 값 — datalist 로 제안만 하고 새 값도 받는다 */
   channels: string[]
   initialVariants: EditVariant[]
+  /** 삭제 카드가 "삭제"/"되살리기" 어느 모양을 보여줄지. */
+  isActive: boolean
+  /** 삭제 카드의 실사 0 가이드문관 경고에 쓰는 현재 재고 합계. */
+  stockSum: number
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     updateProduct,
@@ -151,7 +158,8 @@ export function EditProductForm({
   )
 
   return (
-    <form action={formAction} className="flex flex-col gap-4 pb-4">
+    <div className="flex flex-col gap-6 pb-4">
+      <form action={formAction} className="flex flex-col gap-6">
       <input type="hidden" name="payload" value={payload} />
 
       <Card>
@@ -402,5 +410,15 @@ export function EditProductForm({
         {pending ? '저장 중…' : '저장'}
       </Button>
     </form>
+
+      {/* updateProduct 와 별개 액션이라 위 <form> 밖에 둔다 — 같은 폼 안에 있으면
+          이 카드의 버튼이 상품 정보 저장까지 같이 트리거할 수 있다. */}
+      <DeleteProductCard
+        productId={productId}
+        productName={initialName}
+        isActive={isActive}
+        stockSum={stockSum}
+      />
+    </div>
   )
 }

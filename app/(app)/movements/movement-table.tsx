@@ -9,34 +9,34 @@ import { VoidButton } from './void-button'
 export function MovementTable({ rows }: { rows: MovementRow[] }) {
   return (
     <Card className="overflow-x-auto">
-      <table className="w-full min-w-[56rem] text-sm">
-        <thead className="border-border-base text-ink-muted border-b text-xs">
+      <table className="w-full min-w-[60rem] text-sm">
+        <thead className="bg-surface-sunken text-ink-muted text-xs font-medium">
           <tr>
-            <th scope="col" className="px-3 py-2 text-left font-medium">
+            <th scope="col" className="px-4 py-3 text-left font-medium whitespace-nowrap">
               일시
             </th>
-            <th scope="col" className="px-3 py-2 text-left font-medium">
+            <th scope="col" className="px-4 py-3 text-left font-medium whitespace-nowrap">
               종류
             </th>
-            <th scope="col" className="px-3 py-2 text-left font-medium">
+            <th scope="col" className="px-4 py-3 text-left font-medium whitespace-nowrap">
               상품
             </th>
-            <th scope="col" className="px-3 py-2 text-right font-medium">
+            <th scope="col" className="px-4 py-3 text-right font-medium whitespace-nowrap">
               수량
             </th>
-            <th scope="col" className="px-3 py-2 text-right font-medium">
+            <th scope="col" className="px-4 py-3 text-right font-medium whitespace-nowrap">
               잔여
             </th>
-            <th scope="col" className="px-3 py-2 text-right font-medium">
+            <th scope="col" className="px-4 py-3 text-right font-medium whitespace-nowrap">
               단가
             </th>
-            <th scope="col" className="px-3 py-2 text-left font-medium">
+            <th scope="col" className="px-4 py-3 text-left font-medium whitespace-nowrap">
               거래처 · 메모
             </th>
-            <th scope="col" className="px-3 py-2 text-left font-medium">
+            <th scope="col" className="px-4 py-3 text-left font-medium whitespace-nowrap">
               처리
             </th>
-            <th scope="col" className="px-3 py-2 text-right font-medium">
+            <th scope="col" className="px-4 py-3 text-right font-medium whitespace-nowrap">
               <span className="sr-only">정정</span>
             </th>
           </tr>
@@ -51,33 +51,33 @@ export function MovementTable({ rows }: { rows: MovementRow[] }) {
                 key={row.id}
                 className="border-border-base hover:bg-surface-sunken border-b last:border-0"
               >
-                <td className="text-ink-muted px-3 py-2.5 whitespace-nowrap" data-numeric>
+                <td className="text-ink-muted px-4 py-3.5 whitespace-nowrap" data-numeric>
                   {formatDateTime(row.occurred_at)}
                 </td>
-                <td className="px-3 py-2.5">
+                <td className="px-4 py-3.5">
                   <div className="flex items-center gap-1.5">
                     <MovementKind row={row} />
                     {row.voided_by ? <Badge tone="neutral">정정됨</Badge> : null}
                   </div>
                 </td>
-                <td className="px-3 py-2.5">
+                <td className="px-4 py-3.5">
                   <span className="text-ink font-medium">{row.product_name}</span>
                   {row.option_label ? (
                     <span className="text-ink-muted"> · {row.option_label}</span>
                   ) : null}
                 </td>
-                <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                <td className="px-4 py-3.5 text-right whitespace-nowrap">
                   <QtyDelta row={row} />
                 </td>
-                <td className="text-ink-muted px-3 py-2.5 text-right" data-numeric>
+                <td className="text-ink-muted px-4 py-3.5 text-right" data-numeric>
                   {formatQty(row.stock_after)}
                 </td>
-                <td className="text-ink-muted px-3 py-2.5 text-right" data-numeric>
+                <td className="text-ink-muted px-4 py-3.5 text-right" data-numeric>
                   {row.type === 'purchase' && row.unit_cost
                     ? formatWon(row.unit_cost)
                     : '—'}
                 </td>
-                <td className="text-ink-muted px-3 py-2.5">
+                <td className="text-ink-muted px-4 py-3.5">
                   {row.supplier_name ? (
                     <span className="text-ink">{row.supplier_name}</span>
                   ) : null}
@@ -85,10 +85,10 @@ export function MovementTable({ rows }: { rows: MovementRow[] }) {
                   {row.note}
                   {!row.supplier_name && !row.note ? '—' : null}
                 </td>
-                <td className="text-ink-subtle px-3 py-2.5">
+                <td className="text-ink-subtle px-4 py-3.5 whitespace-nowrap">
                   {row.created_by_name ?? '—'}
                 </td>
-                <td className="px-3 py-2.5 text-right">
+                <td className="px-4 py-3.5 text-right whitespace-nowrap">
                   {canVoid ? <VoidButton id={row.id!} label={label} /> : null}
                 </td>
               </tr>

@@ -25,14 +25,22 @@ export function MobileShell({
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="bg-surface border-border-base sticky top-0 z-10 flex items-center justify-between gap-3 border-b px-4 py-3">
+      <header className="bg-surface/90 border-border-base sticky top-0 z-10 flex items-center justify-between gap-3 border-b px-4 py-3 backdrop-blur">
         {/*
           가게 이름은 제목이 아니라 상표다. h1 로 두면 각 화면이 이미 갖고 있는
           제목과 h1 이 둘이 되고, 화면 제목("재고", "통계")이 문서의 최상위 제목
           자리를 빼앗긴다 — 제목만 훑어 이동하는 사람에게는 모든 화면이 "영심
           스토어"로 보인다. 데스크톱 셸도 같은 이유로 div 다.
         */}
-        <p className="text-ink truncate text-base font-semibold">{storeName}</p>
+        <p className="text-ink flex min-w-0 items-center gap-2 truncate text-base font-semibold">
+          <span
+            aria-hidden
+            className="bg-primary text-primary-ink inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm font-semibold"
+          >
+            {storeName.trim().charAt(0) || 'Z'}
+          </span>
+          <span className="truncate">{storeName}</span>
+        </p>
         {signOut}
       </header>
 
@@ -59,7 +67,7 @@ export function MobileShell({
                   href={item.href}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
-                    'flex h-touch-lg flex-col items-center justify-center gap-0.5',
+                    'flex h-touch-lg flex-col items-center justify-center gap-0.5 transition-colors',
                     active ? 'text-primary' : 'text-ink-subtle',
                   )}
                 >

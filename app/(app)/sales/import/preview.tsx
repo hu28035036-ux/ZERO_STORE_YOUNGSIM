@@ -304,7 +304,7 @@ export function ImportPreview({
   const canConfirm = s.unresolved.length === 0 && s.ok.length > 0 && !saving
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <ReadAs
         headers={headers}
         headerRow={headerRow}

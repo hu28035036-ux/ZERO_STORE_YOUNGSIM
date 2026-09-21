@@ -1,6 +1,7 @@
-import { ArrowDown, ArrowUp, Minus } from 'lucide-react'
+import { ArrowDown, ArrowUp, BarChart3, Minus, ReceiptText, ShoppingBag, Wallet } from 'lucide-react'
 
 import { Card, StatTile } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { cn } from '@/lib/cn'
 import { formatQty, formatWon } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
@@ -81,17 +82,16 @@ export default async function StatsPage({
   const days = dayCount(period.from, period.to)
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h1 className="text-ink text-lg font-semibold tracking-tight">통계</h1>
-        <p className="text-ink-muted text-sm">
-          {period.from} – {period.to} ({days}일)
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="STORE ANALYTICS"
+        title="통계"
+        description="기간별 매출과 재고 흐름을 확인하세요."
+      />
 
       {/* 필터는 한 줄로 맨 위에 둔다. 아래 모든 숫자가 이 기간 하나를 본다.
           카드마다 제 기간을 갖게 하면 나란한 두 숫자가 서로 다른 기간이 된다. */}
-      <PeriodPicker period={period} />
+      <PeriodPicker period={period} days={days} />
 
       {error ? (
         <Card className="p-5">
@@ -100,22 +100,25 @@ export default async function StatsPage({
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatTile
               label="매출"
               value={formatWon(revenue)}
               hint={<Delta current={revenue} previous={Number(before?.revenue ?? 0)} />}
+              icon={ReceiptText}
             />
             <StatTile
               label="마진"
               value={formatWon(margin)}
               tone={margin < 0 ? 'loss' : 'profit'}
               hint={`마진율 ${now?.margin_rate ?? 0}%`}
+              icon={BarChart3}
             />
             <StatTile
               label="판매 건수"
               value={`${formatQty(orders)}건`}
               hint={`${formatQty(Number(now?.qty_sold ?? 0))}점`}
+              icon={ShoppingBag}
             />
             <StatTile
               label="객단가"
@@ -126,6 +129,7 @@ export default async function StatsPage({
                   previous={Number(before?.avg_order_value ?? 0)}
                 />
               }
+              icon={Wallet}
             />
           </div>
 
@@ -138,8 +142,10 @@ export default async function StatsPage({
             to={period.to}
           />
 
-          <TopProductsTable rows={top.data ?? []} />
-          <CategoryTable rows={byCategory.data ?? []} />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <TopProductsTable rows={top.data ?? []} />
+            <CategoryTable rows={byCategory.data ?? []} />
+          </div>
           <SupplierTable rows={bySupplier.data ?? []} />
           <TurnoverTable rows={turnover.data ?? []} />
         </>

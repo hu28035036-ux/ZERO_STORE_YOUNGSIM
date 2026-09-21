@@ -1,6 +1,4 @@
-import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
-
+import { PageHeader } from '@/components/ui/page-header'
 import { createClient } from '@/lib/supabase/server'
 
 import { toCategoryOptions } from '../categories'
@@ -34,17 +32,13 @@ export default async function NewProductPage({
   ].sort((a, b) => a.localeCompare(b, 'ko'))
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <Link
-          href="/stock"
-          aria-label="재고로 돌아가기"
-          className="text-ink-muted hover:bg-surface-sunken hover:text-ink -ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
-        >
-          <ChevronLeft size={20} aria-hidden />
-        </Link>
-        <h1 className="text-ink text-lg font-semibold tracking-tight">상품 등록</h1>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="INVENTORY"
+        title="상품 등록"
+        backHref="/stock"
+        backLabel="재고로 돌아가기"
+      />
 
       <ProductForm
         categories={options}

@@ -1,8 +1,7 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ChevronLeft } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { createClient } from '@/lib/supabase/server'
 
 import { toCategoryOptions } from '../../categories'
@@ -22,7 +21,9 @@ export default async function EditProductPage({
   const [product, rows, categories, channelRows] = await Promise.all([
     supabase
       .from('products')
-      .select('id, name, category_id, channel, unit, purchase_unit_name, pos_name, description')
+      .select(
+        'id, name, category_id, channel, unit, purchase_unit_name, pos_name, description, is_active',
+      )
       .eq('id', productId)
       .maybeSingle(),
     // 변형 값과 재고·원가를 한 번에 받으려고 뷰를 쓴다. 옵션 라벨도 뷰가 만든다.
@@ -38,16 +39,12 @@ export default async function EditProductPage({
   ])
 
   const header = (
-    <div className="flex items-center gap-2">
-      <Link
-        href="/stock"
-        aria-label="재고로 돌아가기"
-        className="text-ink-muted hover:bg-surface-sunken hover:text-ink -ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
-      >
-        <ChevronLeft size={20} aria-hidden />
-      </Link>
-      <h1 className="text-ink text-lg font-semibold tracking-tight">상품 수정</h1>
-    </div>
+    <PageHeader
+      eyebrow="INVENTORY"
+      title="상품 수정"
+      backHref="/stock"
+      backLabel="재고로 돌아가기"
+    />
   )
 
   // "없음"과 "실패"를 반드시 가른다. maybeSingle() 은 조회가 진짜 실패해도
@@ -58,7 +55,7 @@ export default async function EditProductPage({
   const loadError = product.error ?? rows.error
   if (loadError) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-6">
         {header}
         <Card className="p-5">
           <p className="text-danger text-sm font-medium">상품을 불러오지 못했습니다.</p>
@@ -92,8 +89,11 @@ export default async function EditProductPage({
     ...new Set((channelRows.data ?? []).map((r) => r.channel).filter((v): v is string => !!v)),
   ].sort((a, b) => a.localeCompare(b, 'ko'))
 
+  // 삭제 카드가 보여줄 현재 재고 합계. 음수면 경고, 양수면 "실사 0으로 정리" 체크박스가 기본 켜진다.
+  const stockSum = (rows.data ?? []).reduce((sum, v) => sum + (v.stock_qty ?? 0), 0)
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       {header}
 
       <EditProductForm
@@ -108,6 +108,8 @@ export default async function EditProductPage({
         categories={options}
         channels={channels}
         initialVariants={variants}
+        isActive={product.data.is_active ?? true}
+        stockSum={stockSum}
       />
     </div>
   )

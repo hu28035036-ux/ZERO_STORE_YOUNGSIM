@@ -742,6 +742,20 @@ export type Database = {
         }
         Relationships: []
       }
+      v_archived_products: {
+        Row: {
+          archived_at: string | null
+          barcode: string | null
+          category_name: string | null
+          channel: string | null
+          pos_name: string | null
+          product_id: string | null
+          product_name: string | null
+          stock_qty: number | null
+          variant_count: number | null
+        }
+        Relationships: []
+      }
       v_stock_valuation: {
         Row: {
           total_cost_value: number | null
@@ -974,6 +988,18 @@ export type Database = {
       void_product_import: {
         Args: { p_batch_id: string; p_reason?: string }
         Returns: number
+      }
+      archive_product: {
+        Args: { p_product_id: string; p_zero_stock?: boolean; p_note?: string }
+        Returns: number
+      }
+      archive_products: {
+        Args: { p_product_ids: string[]; p_zero_stock?: boolean }
+        Returns: number
+      }
+      restore_product: {
+        Args: { p_product_id: string }
+        Returns: undefined
       }
       void_purchase_import: {
         Args: { p_batch_id: string; p_reason?: string }

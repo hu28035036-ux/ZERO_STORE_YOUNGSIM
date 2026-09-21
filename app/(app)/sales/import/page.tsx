@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/ui/page-header'
 import { getDevice } from '@/lib/server-device'
 
 import { ImportFlow } from './import-flow'
@@ -12,15 +13,18 @@ export default async function SalesImportPage() {
   const device = await getDevice()
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-ink text-lg font-semibold tracking-tight">
-        판매기록 올리기
-      </h1>
-      {device === 'mobile' ? (
-        <p className="text-ink-muted text-sm leading-relaxed">
-          엑셀 올리기는 PC 에서 하는 것이 편합니다. 휴대폰에서도 되긴 합니다.
-        </p>
-      ) : null}
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="SALES RECORDS"
+        title="판매기록 올리기"
+        backHref="/sales"
+        backLabel="판매 기록으로 돌아가기"
+        description={
+          device === 'mobile'
+            ? '엑셀 올리기는 PC 에서 하는 것이 편합니다. 휴대폰에서도 되긴 합니다.'
+            : undefined
+        }
+      />
       <ImportFlow device={device} />
     </div>
   )

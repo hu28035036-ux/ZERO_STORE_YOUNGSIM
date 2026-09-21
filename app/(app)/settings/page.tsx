@@ -3,7 +3,8 @@ import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 
 import { buttonClass } from '@/components/ui/button'
-import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardBody, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { Input, NumberInput, Select } from '@/components/ui/field'
 import { getSessionUser } from '@/lib/auth'
 import { formatQty } from '@/lib/constants'
@@ -43,8 +44,17 @@ export default async function SettingsPage() {
   const drift = integrity.data ?? []
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-ink text-lg font-semibold tracking-tight">설정</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="STORE SETTINGS"
+        title="설정"
+        description="가게 기본 정보와 분류·거래처, 재고 점검 도구를 관리합니다."
+      />
+
+      {/* 가게 정보와 내 이름은 짧은 폼 둘이라 큰 화면에서 나란히 둔다. 세로로
+          쌓으면 첫 화면이 입력칸 네 개로 끝나고 카테고리·거래처가 스크롤 아래로
+          밀린다 — 실제로 자주 손대는 건 그쪽이다. */}
+      <div className="grid gap-6 lg:grid-cols-2">
 
       <Card>
         <CardHeader>
@@ -87,13 +97,17 @@ export default async function SettingsPage() {
         </CardBody>
       </Card>
 
+      </div>
+
       {/* 박스 묶음은 설정이 아니라 물건이지만, 자주 손대는 것이 아니라
           입출고 화면에 상시로 두면 그 화면의 초점이 흐려진다. 관리는 여기,
           쓰는 것은 입출고 화면의 안내에서 들어간다. */}
       <Card>
         <CardHeader>
-          <CardTitle>박스 묶음</CardTitle>
-          <span className="text-ink-muted text-xs">한 박스에 여러 맛이 섞여 오는 상품</span>
+          <div>
+            <CardTitle>박스 묶음</CardTitle>
+            <CardDescription>한 박스에 여러 맛이 섞여 오는 상품</CardDescription>
+          </div>
         </CardHeader>
         <CardBody className="flex flex-col gap-3">
           <p className="text-ink-muted text-sm">
@@ -108,8 +122,10 @@ export default async function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>카테고리</CardTitle>
-          <span className="text-ink-muted text-xs">대분류 &gt; 소분류, 2단까지</span>
+          <div>
+            <CardTitle>카테고리</CardTitle>
+            <CardDescription>대분류 &gt; 소분류, 2단까지</CardDescription>
+          </div>
         </CardHeader>
         <CardBody className="flex flex-col gap-5">
           <ActionForm action={createCategory} submitLabel="추가" layout="row">
@@ -213,7 +229,10 @@ export default async function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>재고 점검</CardTitle>
+          <div>
+            <CardTitle>재고 점검</CardTitle>
+            <CardDescription>입출고 원장과 화면 수량이 맞는지 확인합니다</CardDescription>
+          </div>
         </CardHeader>
         <CardBody className="flex flex-col gap-4">
           {drift.length === 0 ? (

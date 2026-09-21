@@ -23,7 +23,7 @@ export function StockCards({ rows }: { rows: StockRow[] }) {
             <Card className="hover:border-border-strong flex flex-col gap-2 p-4 transition-colors">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-ink truncate text-[0.9375rem] font-medium">
+                  <p className="text-ink truncate text-[0.9375rem] font-semibold">
                     {row.product_name}
                   </p>
                   {row.option_label ? (

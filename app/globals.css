@@ -13,16 +13,21 @@
 
 :root {
   /* --- 표면 ------------------------------------------------------------- */
+  /* 2026-09 리디자인: 순백·회색 대신 아주 옅은 크림색으로 바탕을 깐다.
+     매장에서 하루 종일 켜 두는 화면이라 순백 배경은 눈이 피로하고, 카드가
+     배경과 구분되지 않아 표가 어디서 끝나는지 읽기 어려웠다. 채도는 거의
+     없어야 한다 — 색이 있으면 재고 상태색(초록·주황·빨강)과 싸운다. */
   --surface: #ffffff;        /* 카드, 시트 */
-  --surface-sunken: #f4f4f5; /* 페이지 배경. 카드가 떠 보이게 한 단 낮춘다 */
+  --surface-sunken: #f5f6f3; /* 페이지 배경. 카드가 떠 보이게 한 단 낮춘다 */
   --surface-raised: #ffffff;
-  --border: #e4e4e7;
-  --border-strong: #d4d4d8;
+  --surface-nav: #fafbf8;    /* 사이드바. 카드보다 살짝 낮고 배경보다 살짝 높다 */
+  --border: #e5e9e3;
+  --border-strong: #d3d9d1;
 
   /* --- 글자 ------------------------------------------------------------- */
-  --ink: #18181b;            /* 본문 */
-  --ink-muted: #71717a;      /* 보조 설명 */
-  --ink-subtle: #a1a1aa;     /* 비활성, 플레이스홀더 */
+  --ink: #1f2a26;            /* 본문. 배경이 크림이라 순검정보다 살짝 초록기 있는 먹색 */
+  --ink-muted: #75807a;      /* 보조 설명 */
+  --ink-subtle: #a0a9a3;     /* 비활성, 플레이스홀더 */
   --ink-inverted: #ffffff;
 
   /* --- 주 동작 ----------------------------------------------------------- */
@@ -59,6 +64,7 @@
     --surface: #18181b;
     --surface-sunken: #09090b;
     --surface-raised: #27272a;
+    --surface-nav: #121214;
     --border: #27272a;
     --border-strong: #3f3f46;
 
@@ -97,6 +103,7 @@
   --color-surface: var(--surface);
   --color-surface-sunken: var(--surface-sunken);
   --color-surface-raised: var(--surface-raised);
+  --color-surface-nav: var(--surface-nav);
   --color-border-base: var(--border);
   --color-border-strong: var(--border-strong);
 
@@ -129,7 +136,9 @@
   --spacing-touch: 2.75rem;
   --spacing-touch-lg: 3.5rem;
 
-  --radius-card: 0.875rem;
+  /* 카드 모서리. 목업 검토(2026-09-21)에서 확정한 값 — 더 둥글면 표 카드가
+     장난감처럼 보이고, 덜 둥글면 크림 배경 위에서 딱딱해 보였다. */
+  --radius-card: 1rem;
 
   /* Geist 는 한글 글리프가 없다. 한글은 시스템 폰트로 떨어뜨린다.
      한글 웹폰트는 서브셋을 해도 수백 KB라, 계산대에서 매번 받게 할 이유가 없다.

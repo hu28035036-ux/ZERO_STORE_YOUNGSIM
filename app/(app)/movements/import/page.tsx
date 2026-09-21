@@ -1,8 +1,7 @@
-import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
 
 import { ActionForm } from '@/components/ui/action-form'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { chunks } from '@/lib/chunks'
 import { formatDateTime, formatQty, formatWon } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
@@ -71,19 +70,14 @@ export default async function PurchaseImportPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <Link
-          href="/movements"
-          aria-label="입출고로 돌아가기"
-          className="text-ink-muted hover:bg-surface-sunken hover:text-ink -ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
-        >
-          <ChevronLeft size={20} aria-hidden />
-        </Link>
-        <h1 className="text-ink text-lg font-semibold tracking-tight">
-          입고 파일 반영
-        </h1>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="STOCK MOVEMENTS"
+        title="입고 파일 반영"
+        description="발주서·거래명세서 파일을 올리면 등록된 상품과 짝지어 입고를 한 번에 넣습니다."
+        backHref="/movements"
+        backLabel="입출고로 돌아가기"
+      />
 
       <PurchaseImportFlow />
 

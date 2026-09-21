@@ -1,8 +1,7 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ChevronLeft } from 'lucide-react'
 
 import { createClient } from '@/lib/supabase/server'
+import { PageHeader } from '@/components/ui/page-header'
 import { todayInSeoul } from '@/lib/constants'
 
 import { ReceiveForm } from './receive-form'
@@ -26,22 +25,14 @@ export default async function ReceiveKitPage({
   if (!kit.data) notFound()
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <Link
-          href="/kits"
-          aria-label="박스 목록으로"
-          className="text-ink-muted hover:bg-surface-sunken hover:text-ink -ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Link>
-        <div className="min-w-0">
-          <h1 className="text-ink truncate text-xl font-semibold tracking-tight">
-            {kit.data.name}
-          </h1>
-          <p className="text-ink-subtle text-xs">박스 입고</p>
-        </div>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="BOX RECEIVING"
+        title={kit.data.name}
+        description="박스 하나를 맛별 입고 전표 여러 장으로 폅니다. 실제로 다르게 왔으면 그 줄만 고치세요."
+        backHref="/kits"
+        backLabel="박스 목록으로"
+      />
 
       <ReceiveForm
         kitId={kit.data.id}

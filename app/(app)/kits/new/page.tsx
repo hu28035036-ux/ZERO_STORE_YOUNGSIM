@@ -1,23 +1,19 @@
-import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
 
 import { KitForm } from '../kit-form'
+import { PageHeader } from '@/components/ui/page-header'
 
 export const metadata = { title: '박스 만들기' }
 
 export default function NewKitPage() {
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <Link
-          href="/kits"
-          aria-label="박스 목록으로"
-          className="text-ink-muted hover:bg-surface-sunken hover:text-ink -ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Link>
-        <h1 className="text-ink text-xl font-semibold tracking-tight">박스 만들기</h1>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="STORE SETTINGS"
+        title="박스 만들기"
+        description="박스 이름과 안에 든 상품, 보통 몇 개씩 드는지를 적어 둡니다."
+        backHref="/kits"
+        backLabel="박스 목록으로"
+      />
       <KitForm kitId={null} initialName="" initialNote="" initialItems={[]} />
     </div>
   )

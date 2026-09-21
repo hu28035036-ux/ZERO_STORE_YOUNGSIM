@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/field'
+import { PageHeader } from '@/components/ui/page-header'
 import { cn } from '@/lib/cn'
 import { formatQty, formatWon, todayInSeoul } from '@/lib/constants'
 import type { Device } from '@/lib/device'
@@ -146,59 +147,66 @@ export function SaleLinesForm({ device }: { device: Device }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-ink text-lg font-semibold tracking-tight">판매 적기</h1>
-        {cart.length > 0 ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setCart([])
-              scanRef.current?.focus()
-            }}
-          >
-            전체 비우기
-          </Button>
-        ) : null}
-      </div>
+      <PageHeader
+        eyebrow="SALES RECORDS"
+        title="판매 적기"
+        backHref="/sales"
+        backLabel="판매 기록으로 돌아가기"
+        actions={
+          cart.length > 0 ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setCart([])
+                scanRef.current?.focus()
+              }}
+            >
+              전체 비우기
+            </Button>
+          ) : undefined
+        }
+      />
 
       {/* 판매 폼과 별개의 폼이다. 폼은 중첩될 수 없고, 스캔의 엔터가 판매를
           확정시키면 안 된다. */}
-      <form onSubmit={handleScan} className="flex gap-2">
-        <div className="relative min-w-0 flex-1">
-          <ScanLine
-            size={20}
-            aria-hidden
-            className="text-ink-subtle pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
-          />
-          <input
-            ref={scanRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="바코드를 찍거나 상품명을 치세요"
-            aria-label="바코드 또는 상품명"
-            autoFocus
-            autoCapitalize="none"
-            autoComplete="off"
-            // 스캐너는 코드를 치고 엔터를 누른다. 폼의 submit 이 그대로 조회가 된다.
-            enterKeyHint="search"
-            className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-touch-lg w-full rounded-lg border pr-3 pl-11 text-base outline-none"
-          />
-        </div>
-        {/* 컨트롤드 입력이라 공용 ScanButton(DOM 에 값을 직접 넣는 방식)을 못
-            쓴다 — React 가 되돌린다. 조회 함수를 직접 부른다. */}
-        <Button
-          type="button"
-          variant="secondary"
-          size="lg"
-          className="shrink-0"
-          aria-label="카메라로 바코드 찍기"
-          onClick={() => setCameraOpen(true)}
-        >
-          <Camera size={20} aria-hidden />
-        </Button>
-      </form>
+      <Card className="p-4">
+        <form onSubmit={handleScan} className="flex gap-2">
+          <div className="relative min-w-0 flex-1">
+            <ScanLine
+              size={20}
+              aria-hidden
+              className="text-ink-subtle pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+            />
+            <input
+              ref={scanRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="바코드를 찍거나 상품명을 치세요"
+              aria-label="바코드 또는 상품명"
+              autoFocus
+              autoCapitalize="none"
+              autoComplete="off"
+              // 스캐너는 코드를 치고 엔터를 누른다. 폼의 submit 이 그대로 조회가 된다.
+              enterKeyHint="search"
+              className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-12 w-full rounded-lg border pr-3 pl-11 text-base outline-none"
+            />
+          </div>
+          {/* 컨트롤드 입력이라 공용 ScanButton(DOM 에 값을 직접 넣는 방식)을 못
+              쓴다 — React 가 되돌린다. 조회 함수를 직접 부른다. */}
+          <Button
+            type="button"
+            variant="secondary"
+            size="lg"
+            className="h-12 shrink-0"
+            aria-label="카메라로 바코드 찍기"
+            onClick={() => setCameraOpen(true)}
+          >
+            <Camera size={20} aria-hidden />
+          </Button>
+        </form>
+      </Card>
       <BarcodeScanner
         open={cameraOpen}
         onDetect={(code) => {

@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { ChevronLeft, X } from 'lucide-react'
+import { X } from 'lucide-react'
 
 import { Card } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { likePattern } from '@/lib/search'
 import { getDevice } from '@/lib/server-device'
 import { createClient } from '@/lib/supabase/server'
@@ -67,17 +68,14 @@ export default async function MovementHistoryPage({
     query.type !== 'all' || Boolean(query.from || query.to) || Boolean(pattern)
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <Link
-          href="/movements"
-          aria-label="입출고 등록으로 돌아가기"
-          className="text-ink-muted hover:bg-surface-sunken hover:text-ink -ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
-        >
-          <ChevronLeft size={20} aria-hidden />
-        </Link>
-        <h1 className="text-ink text-lg font-semibold tracking-tight">입출고 기록</h1>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="STOCK MOVEMENTS"
+        title="입출고 기록"
+        description="종류·기간·상품으로 전표를 찾고, 잘못 넣은 것은 정정하세요."
+        backHref="/movements"
+        backLabel="입출고 등록으로 돌아가기"
+      />
 
       {query.variantId ? (
         <Card className="flex items-center justify-between gap-3 px-4 py-3">

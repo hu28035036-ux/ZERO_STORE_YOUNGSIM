@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { Boxes, ChevronRight, FileUp, ScrollText, Search } from 'lucide-react'
 
+import { buttonClass } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { likePattern, productSearchFilter } from '@/lib/search'
 import { createClient } from '@/lib/supabase/server'
 
@@ -87,26 +89,24 @@ export default async function MovementsPage({
   }))
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-ink text-lg font-semibold tracking-tight">입출고</h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/movements/history"
-            className="border-border-strong text-ink hover:bg-surface-sunken h-touch inline-flex items-center justify-center gap-2 rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors select-none"
-          >
-            <ScrollText size={18} aria-hidden />
-            기록
-          </Link>
-          <Link
-            href="/movements/import"
-            className="border-border-strong text-ink hover:bg-surface-sunken h-touch inline-flex items-center justify-center gap-2 rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors select-none"
-          >
-            <FileUp size={18} aria-hidden />
-            파일로 입고
-          </Link>
-        </div>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="STOCK MOVEMENTS"
+        title="입출고"
+        description="상품을 찾아 줄에서 바로 수량을 등록하세요."
+        actions={
+          <>
+            <Link href="/movements/history" className={buttonClass('secondary')}>
+              <ScrollText size={18} aria-hidden />
+              기록
+            </Link>
+            <Link href="/movements/import" className={buttonClass('primary')}>
+              <FileUp size={18} aria-hidden />
+              파일로 입고
+            </Link>
+          </>
+        }
+      />
 
       {target ? (
         <MovementForm
@@ -131,21 +131,21 @@ export default async function MovementsPage({
               찾기 칸을 지나친 뒤에는 다시 안 올라온다. */}
           <Link
             href="/kits"
-            className="border-border-base hover:border-border-strong hover:bg-surface-sunken flex items-center gap-3 rounded-card border p-4 transition-colors"
+            className="bg-primary-soft text-primary hover:bg-primary-soft/70 flex items-center gap-3 rounded-xl px-5 py-4 transition-colors"
           >
-            <Boxes className="text-ink-muted h-5 w-5 shrink-0" aria-hidden />
+            <Boxes className="h-5 w-5 shrink-0" aria-hidden />
             <span className="min-w-0 flex-1">
-              <span className="text-ink block text-sm font-medium">
+              <span className="block text-sm font-semibold">
                 한 박스에 여러 맛이 섞여 왔나요?
               </span>
-              <span className="text-ink-subtle block text-xs">
+              <span className="block text-xs opacity-80">
                 곤약젤리 버라이어티팩처럼 섞여 오는 상품은 박스 묶음으로 한 번에 넣습니다
               </span>
             </span>
-            <ChevronRight className="text-ink-subtle h-4 w-4 shrink-0" aria-hidden />
+            <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
           </Link>
 
-          <Card className="p-4">
+          <Card className="p-5">
             <form action="/movements" className="flex gap-2">
               {/* min-w-0: 버튼이 두 개(찾기 + 카메라)로 늘면서 flex 기본 최소폭이
                   콘텐츠 크기인 채로 있으면 좁은 화면에서 이 칸이 밀려 잘릴 수 있다

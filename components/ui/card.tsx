@@ -1,4 +1,5 @@
 import type { HTMLAttributes } from 'react'
+import type { LucideIcon } from 'lucide-react'
 
 import { cn } from '@/lib/cn'
 
@@ -21,7 +22,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        'border-border-base flex items-center justify-between gap-3 border-b px-4 py-3',
+        'border-border-base flex items-center justify-between gap-3 border-b px-5 py-4',
         className,
       )}
       {...props}
@@ -38,8 +39,15 @@ export function CardTitle({
   )
 }
 
+export function CardDescription({
+  className,
+  ...props
+}: HTMLAttributes<HTMLParagraphElement>) {
+  return <p className={cn('text-ink-muted mt-0.5 text-xs', className)} {...props} />
+}
+
 export function CardBody({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('p-4', className)} {...props} />
+  return <div className={cn('p-5', className)} {...props} />
 }
 
 /**
@@ -51,12 +59,18 @@ export function CardBody({ className, ...props }: HTMLAttributes<HTMLDivElement>
 export function StatTile({
   label,
   value,
+  unit,
   hint,
+  icon: Icon,
   tone = 'neutral',
   className,
 }: {
   label: string
   value: string
+  /** 값 뒤에 작게 붙는 단위. formatWon 처럼 값에 이미 단위가 있으면 비운다. */
+  unit?: string
+  /** 라벨 오른쪽 작은 픽토그램. 네 개가 나란히 설 때 무슨 숫자인지 먼저 잡아준다. */
+  icon?: LucideIcon
   /** 증감 표시처럼 아이콘이 붙는 경우가 있어 노드를 받는다. */
   hint?: React.ReactNode
   tone?: 'neutral' | 'profit' | 'loss' | 'low'
@@ -70,17 +84,37 @@ export function StatTile({
   }[tone]
 
   return (
-    <Card className={cn('px-4 py-3', className)}>
-      <div className="text-ink-muted text-xs font-medium">{label}</div>
+    <Card className={cn('px-5 py-4', className)}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-ink-muted text-xs font-medium">{label}</div>
+        {Icon ? (
+          <span
+            aria-hidden
+            className="bg-surface-sunken text-ink-subtle inline-flex h-7 w-7 items-center justify-center rounded-lg"
+          >
+            <Icon size={15} />
+          </span>
+        ) : null}
+      </div>
       {/*
         여기에는 data-numeric 을 붙이지 않는다. 자릿수를 고정하면 표에서는
         세로로 줄이 맞아 읽기 좋지만, 이렇게 혼자 큰 숫자에서는 글자 사이가
         벌어져 성기게 보인다. 자릿수 정렬은 여러 줄이 겹쳐 있을 때만 쓸모가 있다.
       */}
-      <div className={cn('mt-1 text-xl font-semibold tracking-tight', toneClass)}>
+      <div
+        className={cn(
+          'mt-2 text-[1.625rem] leading-tight font-semibold tracking-tight',
+          toneClass,
+        )}
+      >
         {value}
+        {unit ? (
+          <span className="text-ink-muted ml-1 text-sm font-medium tracking-normal">
+            {unit}
+          </span>
+        ) : null}
       </div>
-      {hint ? <div className="text-ink-subtle mt-0.5 text-xs">{hint}</div> : null}
+      {hint ? <div className="text-ink-subtle mt-1 text-xs">{hint}</div> : null}
     </Card>
   )
 }

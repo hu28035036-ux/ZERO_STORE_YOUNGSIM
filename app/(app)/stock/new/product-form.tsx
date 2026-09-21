@@ -209,7 +209,7 @@ export function ProductForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-4 pb-4">
+    <form action={formAction} className="flex flex-col gap-6 pb-4">
       {/* 옵션 축과 변형이 동적이라 폼 필드로 펼치는 대신 JSON 한 덩이로 보낸다.
           검증은 서버의 zod 와 DB 제약이 다시 한다. */}
       <input type="hidden" name="payload" value={payload} />

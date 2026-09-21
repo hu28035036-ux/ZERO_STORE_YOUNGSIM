@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Search } from 'lucide-react'
 
 import { ScanButton } from '@/components/scanner/scan-button'
+import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/cn'
 
 import { FILTER_LABEL, FILTERS, stockHref, type StockQuery } from './query'
@@ -15,8 +16,8 @@ import { FILTER_LABEL, FILTERS, stockHref, type StockQuery } from './query'
  */
 export function StockToolbar({ query }: { query: StockQuery }) {
   return (
-    <div className="flex flex-col gap-3">
-      <form action="/stock" className="flex gap-2">
+    <Card className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+      <form action="/stock" className="flex min-w-0 flex-1 gap-2">
         {/* 검색해도 보던 필터·정렬은 유지되어야 한다. */}
         {query.filter !== 'all' ? (
           <input type="hidden" name="filter" value={query.filter} />
@@ -28,7 +29,7 @@ export function StockToolbar({ query }: { query: StockQuery }) {
 
         {/* min-w-0: 카메라 버튼이 늘면서 좁은 화면에서 입력칸이 카드 밖으로
             밀리지 않게 한다 — 판매 화면 금액 잘림(ac46d4b)과 같은 사고 예방. */}
-        <div className="relative min-w-0 flex-1">
+        <div className="relative min-w-0 max-w-md flex-1">
           <Search
             size={18}
             aria-hidden
@@ -42,7 +43,7 @@ export function StockToolbar({ query }: { query: StockQuery }) {
             aria-label="재고 검색"
             autoCapitalize="none"
             autoComplete="off"
-            className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-touch w-full rounded-lg border pr-3 pl-10 text-base outline-none"
+            className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-11 w-full rounded-lg border pr-3 pl-10 text-base outline-none"
           />
         </div>
         {/* "이거 몇 개 남았지?" 를 물건을 들고 바로 확인하는 경로. 스캔값은
@@ -50,13 +51,13 @@ export function StockToolbar({ query }: { query: StockQuery }) {
         <ScanButton inputName="q" />
         <button
           type="submit"
-          className="bg-surface text-ink border-border-strong hover:bg-surface-sunken h-touch inline-flex shrink-0 items-center rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors"
+          className="bg-surface text-ink border-border-strong hover:bg-surface-sunken h-11 inline-flex shrink-0 items-center rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors"
         >
           검색
         </button>
       </form>
 
-      <div className="flex gap-2 overflow-x-auto">
+      <div className="flex gap-1.5 overflow-x-auto">
         {FILTERS.map((f) => {
           const on = query.filter === f
           return (
@@ -65,10 +66,10 @@ export function StockToolbar({ query }: { query: StockQuery }) {
               href={stockHref(query, { filter: f })}
               aria-current={on ? 'true' : undefined}
               className={cn(
-                'inline-flex h-9 shrink-0 items-center rounded-full border px-3.5 text-sm font-medium transition-colors',
+                'inline-flex h-9 shrink-0 items-center rounded-lg px-3 text-sm font-medium transition-colors',
                 on
-                  ? 'bg-primary text-primary-ink border-primary'
-                  : 'bg-surface text-ink-muted border-border-strong hover:bg-surface-sunken',
+                  ? 'bg-primary-soft text-primary font-semibold'
+                  : 'text-ink-muted hover:bg-surface-sunken',
               )}
             >
               {FILTER_LABEL[f]}
@@ -76,6 +77,6 @@ export function StockToolbar({ query }: { query: StockQuery }) {
           )
         })}
       </div>
-    </div>
+    </Card>
   )
 }

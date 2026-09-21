@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+import { buttonClass } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/cn'
 import { todayInSeoul } from '@/lib/constants'
 
@@ -11,12 +13,12 @@ import { periodHref, PRESET_LABEL, PRESETS, type Period } from './period'
  * 화면 맨 위에 한 줄로 둔다. 아래의 모든 숫자가 같은 기간을 본다 — 카드마다
  * 제 기간을 갖게 하면 나란히 놓인 두 숫자가 서로 다른 기간이라 비교가 안 된다.
  */
-export function PeriodPicker({ period }: { period: Period }) {
+export function PeriodPicker({ period, days }: { period: Period; days: number }) {
   const today = todayInSeoul()
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex gap-2 overflow-x-auto">
+    <Card className="flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-wrap gap-1">
         {PRESETS.map((p) => {
           const on = period.preset === p
           return (
@@ -25,10 +27,10 @@ export function PeriodPicker({ period }: { period: Period }) {
               href={periodHref({ preset: p })}
               aria-current={on ? 'true' : undefined}
               className={cn(
-                'inline-flex h-9 shrink-0 items-center rounded-full border px-3.5 text-sm font-medium transition-colors',
+                'inline-flex h-9 shrink-0 items-center rounded-lg px-3 text-sm font-medium transition-colors',
                 on
-                  ? 'bg-primary text-primary-ink border-primary'
-                  : 'bg-surface text-ink-muted border-border-strong hover:bg-surface-sunken',
+                  ? 'bg-primary-soft text-primary font-semibold'
+                  : 'text-ink-muted hover:bg-surface-sunken',
               )}
             >
               {PRESET_LABEL[p]}
@@ -37,36 +39,34 @@ export function PeriodPicker({ period }: { period: Period }) {
         })}
       </div>
 
-      <form action="/stats" className="flex flex-wrap items-end gap-2">
-        <label className="flex flex-col gap-1">
-          <span className="text-ink-muted text-xs">시작일</span>
-          <input
-            type="date"
-            name="from"
-            defaultValue={period.from}
-            max={today}
-            required
-            className="bg-surface text-ink border-border-strong focus:border-primary h-touch rounded-lg border px-3 text-base outline-none"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-ink-muted text-xs">종료일</span>
-          <input
-            type="date"
-            name="to"
-            defaultValue={period.to}
-            max={today}
-            required
-            className="bg-surface text-ink border-border-strong focus:border-primary h-touch rounded-lg border px-3 text-base outline-none"
-          />
-        </label>
-        <button
-          type="submit"
-          className="bg-surface text-ink border-border-strong hover:bg-surface-sunken h-touch inline-flex items-center rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors"
-        >
+      <form action="/stats" className="flex flex-wrap items-center gap-2">
+        {/* 기간 표시 문구 — 날짜 칸 위에 둘 이유가 없어 한 줄에 놓는다. */}
+        <span className="text-ink-muted text-sm whitespace-nowrap" data-numeric>
+          {period.from} ~ {period.to} ({days}일)
+        </span>
+        <input
+          type="date"
+          name="from"
+          defaultValue={period.from}
+          max={today}
+          required
+          aria-label="시작일"
+          className="bg-surface text-ink border-border-strong focus:border-primary h-9 rounded-lg border px-3 text-sm outline-none"
+        />
+        <span className="text-ink-subtle text-sm">~</span>
+        <input
+          type="date"
+          name="to"
+          defaultValue={period.to}
+          max={today}
+          required
+          aria-label="종료일"
+          className="bg-surface text-ink border-border-strong focus:border-primary h-9 rounded-lg border px-3 text-sm outline-none"
+        />
+        <button type="submit" className={buttonClass('secondary', 'sm')}>
           기간 보기
         </button>
       </form>
-    </div>
+    </Card>
   )
 }

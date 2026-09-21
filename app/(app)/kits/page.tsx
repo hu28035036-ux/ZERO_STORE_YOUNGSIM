@@ -3,6 +3,7 @@ import { Boxes, ChevronRight, Plus } from 'lucide-react'
 
 import { buttonClass } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { createClient } from '@/lib/supabase/server'
 
 export const metadata = { title: '박스 묶음' }
@@ -24,20 +25,20 @@ export default async function KitsPage() {
   const kits = data ?? []
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-ink text-xl font-semibold tracking-tight">박스 묶음</h1>
-          <p className="text-ink-muted mt-1 max-w-prose text-sm">
-            한 박스에 여러 맛이 섞여 오는 상품을 여기 등록해 두면, 입고할 때 맛별로
-            펼쳐서 개수만 확인하면 됩니다. 재고는 맛별로 따로 셉니다.
-          </p>
-        </div>
-        <Link href="/kits/new" className={buttonClass('primary', 'md', false, 'shrink-0')}>
-          <Plus className="h-4 w-4" />
-          박스 만들기
-        </Link>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="STORE SETTINGS"
+        title="박스 묶음"
+        description="한 박스에 여러 맛이 섞여 오는 상품을 여기 등록해 두면, 입고할 때 맛별로 펼쳐서 개수만 확인하면 됩니다. 재고는 맛별로 따로 셉니다."
+        backHref="/settings"
+        backLabel="설정으로 돌아가기"
+        actions={
+          <Link href="/kits/new" className={buttonClass('primary')}>
+            <Plus className="h-4 w-4" />
+            박스 만들기
+          </Link>
+        }
+      />
 
       {error ? (
         <Card className="p-4">

@@ -1,11 +1,14 @@
 import Link from 'next/link'
-import { FileUp, Plus } from 'lucide-react'
+import { Boxes, FileUp, Plus, Tag, TriangleAlert, Wallet } from 'lucide-react'
 
+import { buttonClass } from '@/components/ui/button'
 import { Card, StatTile } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { formatQty, formatWon } from '@/lib/constants'
 import { getDevice } from '@/lib/server-device'
 import { createClient } from '@/lib/supabase/server'
 
+import { ArchivedTable, type ArchivedProduct } from './archived-table'
 import {
   LIST_LIMIT,
   likePattern,
@@ -28,10 +31,116 @@ export default async function StockPage({
   const query = parseStockQuery(await searchParams)
   const supabase = await createClient()
 
+  const [valuation, lowCount] = await Promise.all([
+    supabase.from('v_stock_valuation').select('*').maybeSingle(),
+    supabase.from('v_low_stock').select('*', { count: 'exact', head: true }),
+  ])
+  const low = lowCount.count ?? 0
+
+  const header = (
+    <>
+      <PageHeader
+        eyebrow="INVENTORY"
+        title="재고"
+        description="상품별 수량과 가격을 빠르게 확인하세요."
+        actions={
+          <>
+            {/* Button 이 아니라 Link 다. 새 화면으로 가는 동작은 링크여야
+                길게 눌러 새 탭으로 열거나 뒤로 가기가 정상 동작한다. */}
+            <Link href="/stock/import" className={buttonClass('secondary')}>
+              <FileUp size={18} aria-hidden />
+              파일로 등록
+            </Link>
+            <Link href="/stock/new" className={buttonClass('primary')}>
+              <Plus size={18} aria-hidden />
+              상품 등록
+            </Link>
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatTile
+          label="재고 품목"
+          value={formatQty(valuation.data?.variant_count)}
+          unit="개"
+          hint={`총 ${formatQty(valuation.data?.total_qty)}점`}
+          icon={Boxes}
+        />
+        <StatTile
+          label="재고 자산 (원가)"
+          value={formatWon(valuation.data?.total_cost_value)}
+          icon={Wallet}
+        />
+        <StatTile
+          label="판매가 환산"
+          value={formatWon(valuation.data?.total_retail_value)}
+          icon={Tag}
+          className="max-lg:hidden"
+        />
+        <StatTile
+          label="부족·품절"
+          value={`${formatQty(low)}`}
+          unit="개"
+          tone={low > 0 ? 'low' : 'neutral'}
+          hint={low > 0 ? '채워 넣을 것이 있습니다' : '모두 넉넉합니다'}
+          icon={TriangleAlert}
+        />
+      </div>
+
+      {/* 상품 수정 화면의 삭제에서 넘어온 안내. 필터와 무관하게 한 번만 보여준다. */}
+      {query.archivedName ? (
+        <Card className="px-5 py-3">
+          <p className="text-in text-sm">
+            {query.archivedName} 을(를) 삭제했습니다. 재고 목록에서 숨겼고 기록은
+            남아 있습니다.
+          </p>
+        </Card>
+      ) : null}
+    </>
+  )
+
+  if (query.filter === 'archived') {
+    const pattern = likePattern(query.q)
+    let archivedList = supabase
+      .from('v_archived_products')
+      .select('*')
+      .order('archived_at', { ascending: false })
+      .limit(LIST_LIMIT)
+    if (pattern) archivedList = archivedList.ilike('product_name', pattern)
+
+    const archivedResult = await archivedList
+    const archivedRows = (archivedResult.data ?? []) as ArchivedProduct[]
+
+    return (
+      <div className="flex flex-col gap-6">
+        {header}
+        <StockToolbar query={query} />
+
+        {archivedResult.error ? (
+          <Card className="p-5">
+            <p className="text-danger text-sm font-medium">삭제된 상품을 불러오지 못했습니다.</p>
+            <p className="text-ink-muted mt-1.5 text-sm">{archivedResult.error.message}</p>
+          </Card>
+        ) : archivedRows.length === 0 ? (
+          <Card className="p-5">
+            <p className="text-ink text-sm font-medium">삭제한 상품이 없습니다.</p>
+            <p className="text-ink-muted mt-1.5 text-sm">
+              재고 표에서 상품을 삭제하면 여기서 되살릴 수 있습니다.
+            </p>
+          </Card>
+        ) : (
+          <ArchivedTable rows={archivedRows} />
+        )}
+      </div>
+    )
+  }
+
   let list = supabase
     .from('v_variant_stock')
     .select('*')
-    // 판매 중지한 상품·변형은 재고 목록에서 뺀다. 되살리는 것은 설정 화면 몫이다.
+    // 판매 중지한 상품·변형은 재고 목록에서 뺀다. 되살리는 것은 이 화면의
+    // "삭제됨" 탭 몫이다.
     .eq('is_active', true)
     .eq('product_active', true)
     .limit(LIST_LIMIT)
@@ -52,63 +161,14 @@ export default async function StockPage({
   // 같은 상품 안에서는 옵션 순. 옵션 없는 변형(label = null)이 맨 위로 온다.
   list = list.order('option_label', { nullsFirst: true })
 
-  const [device, listResult, valuation, lowCount] = await Promise.all([
-    getDevice(),
-    list,
-    supabase.from('v_stock_valuation').select('*').maybeSingle(),
-    supabase.from('v_low_stock').select('*', { count: 'exact', head: true }),
-  ])
+  const [device, listResult] = await Promise.all([getDevice(), list])
 
   const rows = (listResult.data ?? []) as StockRow[]
-  const low = lowCount.count ?? 0
   const narrowed = Boolean(query.q) || query.filter !== 'all'
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-ink text-lg font-semibold tracking-tight">재고</h1>
-        {/* Button 이 아니라 Link 다. 새 화면으로 가는 동작은 링크여야
-            길게 눌러 새 탭으로 열거나 뒤로 가기가 정상 동작한다. */}
-        <div className="flex items-center gap-2">
-          <Link
-            href="/stock/import"
-            className="border-border-strong text-ink hover:bg-surface-sunken h-touch inline-flex items-center justify-center gap-2 rounded-lg border px-4 text-[0.9375rem] font-medium transition-colors select-none"
-          >
-            <FileUp size={18} aria-hidden />
-            파일로 등록
-          </Link>
-          <Link
-            href="/stock/new"
-            className="bg-primary text-primary-ink hover:bg-primary-hover h-touch inline-flex items-center justify-center gap-2 rounded-lg px-4 text-[0.9375rem] font-medium transition-colors select-none"
-          >
-            <Plus size={18} aria-hidden />
-            상품 등록
-          </Link>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile
-          label="재고 품목"
-          value={`${formatQty(valuation.data?.variant_count)}개`}
-          hint={`총 ${formatQty(valuation.data?.total_qty)}점`}
-        />
-        <StatTile
-          label="재고 자산 (원가)"
-          value={formatWon(valuation.data?.total_cost_value)}
-        />
-        <StatTile
-          label="판매가 환산"
-          value={formatWon(valuation.data?.total_retail_value)}
-          className="max-lg:hidden"
-        />
-        <StatTile
-          label="부족·품절"
-          value={`${formatQty(low)}개`}
-          tone={low > 0 ? 'low' : 'neutral'}
-          hint={low > 0 ? '채워 넣을 것이 있습니다' : '모두 넉넉합니다'}
-        />
-      </div>
+    <div className="flex flex-col gap-6">
+      {header}
 
       <StockToolbar query={query} />
 

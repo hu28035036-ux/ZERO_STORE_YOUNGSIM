@@ -24,13 +24,14 @@ export function posSubtitle(row: Pick<StockRow, 'product_name' | 'pos_name'>): s
   return flatten(pos) === flatten(row.product_name ?? '') ? null : pos
 }
 
-export const FILTERS = ['all', 'low', 'negative'] as const
+export const FILTERS = ['all', 'low', 'negative', 'archived'] as const
 export type StockFilter = (typeof FILTERS)[number]
 
 export const FILTER_LABEL: Record<StockFilter, string> = {
   all: '전체',
   low: '부족·품절',
   negative: '음수',
+  archived: '삭제됨',
 }
 
 /**
@@ -65,17 +66,22 @@ export type StockQuery = {
   filter: StockFilter
   sort: SortKey
   desc: boolean
+  /** 상품 수정 화면에서 삭제하고 돌아왔을 때 보여줄 이름. 필터·정렬과 달리
+   *  링크 상태가 아니라 1회성 안내라 stockHref/sortHref 는 이 값을 건드리지 않는다. */
+  archivedName: string | null
 }
 
 export function parseStockQuery(sp: {
   [key: string]: string | string[] | undefined
 }): StockQuery {
   const raw = typeof sp.q === 'string' ? sp.q : ''
+  const archivedRaw = typeof sp.archived === 'string' ? sp.archived : ''
   return {
     q: raw.trim().slice(0, 40),
     filter: FILTERS.find((f) => f === sp.filter) ?? 'all',
     sort: SORT_KEYS.find((s) => s === sp.sort) ?? 'name',
     desc: sp.dir === 'desc',
+    archivedName: archivedRaw.trim().slice(0, 120) || null,
   }
 }
 

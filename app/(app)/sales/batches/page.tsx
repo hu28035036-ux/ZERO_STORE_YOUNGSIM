@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import { ActionForm } from '@/components/ui/action-form'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { formatDateTime, formatQty, formatWon } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 
@@ -52,8 +53,13 @@ export default async function BatchesPage() {
   const manual = orders.filter((o) => o.source !== 'import')
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-ink text-lg font-semibold tracking-tight">임포트 이력</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="SALES RECORDS"
+        title="임포트 이력"
+        backHref="/sales"
+        backLabel="판매 기록으로 돌아가기"
+      />
 
       {batches.size === 0 ? (
         <Card className="p-5">
@@ -126,7 +132,7 @@ export default async function BatchesPage() {
                 return (
                   <li
                     key={o.id}
-                    className="border-border-base flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3 last:border-0"
+                    className="border-border-base flex flex-wrap items-center justify-between gap-2 border-b px-5 py-4 last:border-0"
                   >
                     <div className="min-w-0">
                       <p className="text-ink text-sm font-medium" data-numeric>

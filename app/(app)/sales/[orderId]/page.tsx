@@ -1,9 +1,8 @@
-import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ChevronLeft } from 'lucide-react'
 
 import { ActionForm } from '@/components/ui/action-form'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { formatDateTime, formatQty, formatWon } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 
@@ -52,17 +51,13 @@ export default async function SaleOrderPage({
   const qtyTotal = lines.reduce((s, l) => s + -(l.qty_delta ?? 0), 0)
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <Link
-          href="/sales"
-          aria-label="판매 기록으로 돌아가기"
-          className="text-ink-muted hover:bg-surface-sunken hover:text-ink -ml-2 inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors"
-        >
-          <ChevronLeft size={20} aria-hidden />
-        </Link>
-        <h1 className="text-ink text-lg font-semibold tracking-tight">영수증</h1>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        eyebrow="SALES RECORDS"
+        title="영수증"
+        backHref="/sales"
+        backLabel="판매 기록으로 돌아가기"
+      />
 
       {voided ? (
         <Card className="border-border-strong bg-surface-sunken p-4">
@@ -114,7 +109,7 @@ export default async function SaleOrderPage({
             {lines.map((l) => (
               <li
                 key={l.id}
-                className="flex items-baseline justify-between gap-3 px-4 py-3"
+                className="flex items-baseline justify-between gap-3 px-5 py-4"
               >
                 <div className="min-w-0">
                   <p className="text-ink truncate text-sm font-medium">
