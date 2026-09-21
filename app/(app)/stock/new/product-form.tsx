@@ -1,11 +1,12 @@
 'use client'
 
+import Link from 'next/link'
 import { useActionState, useMemo, useState } from 'react'
 import { Camera, Plus, Trash2 } from 'lucide-react'
 
 import { BarcodeScanner } from '@/components/scanner/barcode-scanner'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, buttonClass } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input, NumberInput } from '@/components/ui/field'
 import { cn } from '@/lib/cn'
@@ -227,28 +228,6 @@ export function ProductForm({
             required
             maxLength={120}
           />
-          <CategorySelect
-            categories={categories}
-            value={categoryId}
-            onChange={setCategoryId}
-          />
-          {/* select 가 아니라 datalist 다 — 유통방식은 정해진 목록이 아니라
-              본사 사정으로 언제든 새 값이 생기는 말이라, 제안은 하되 자유
-              입력을 막으면 안 된다. */}
-          <Input
-            label="유통방식"
-            value={channel}
-            onChange={(e) => setChannel(e.target.value)}
-            placeholder="예: CJFW, 택배, 쿠팡"
-            maxLength={30}
-            list="channel-options"
-            hint="어디서 들어오는 상품인지. 새 값을 적으면 그대로 만들어집니다."
-          />
-          <datalist id="channel-options">
-            {channels.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
           {/* 매장 POS 가 발주 시트와 다른 이름을 쓰는 상품이 22% 다. 여기 채우면
               재고 검색이 두 이름을 다 훑는다 — 안 채우면 발주명으로만 찾힌다. */}
           <Input
@@ -259,7 +238,33 @@ export function ProductForm({
             maxLength={120}
             hint="매장 POS 에 등록된 이름. 발주 시트와 다를 때만 채우면 됩니다"
           />
-          <div className="grid grid-cols-2 gap-3">
+          {/* 분류와 유통은 짧은 값이라 한 줄에 둘. 세로로 쌓으면 상품명과 POS 명이
+              화면 위아래로 갈라져 같은 상품을 두 번 적는 느낌이 난다. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CategorySelect
+              categories={categories}
+              value={categoryId}
+              onChange={setCategoryId}
+            />
+            {/* select 가 아니라 datalist 다 — 유통방식은 정해진 목록이 아니라
+                본사 사정으로 언제든 새 값이 생기는 말이라, 제안은 하되 자유
+                입력을 막으면 안 된다. */}
+            <Input
+              label="유통방식"
+              value={channel}
+              onChange={(e) => setChannel(e.target.value)}
+              placeholder="예: CJFW, 택배, 쿠팡"
+              maxLength={30}
+              list="channel-options"
+              hint="어디서 들어오는 상품인지. 새 값을 적으면 그대로 만들어집니다."
+            />
+            <datalist id="channel-options">
+              {channels.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
             {/* 여기도 datalist — 단위는 정해진 목록이 아니라 자유 입력이고,
                 추천은 고르기 편하라고만 있다. DB 에는 친 글자 그대로 간다. */}
             <Input
@@ -587,9 +592,16 @@ export function ProductForm({
         {state?.error ? <span className="text-danger">{state.error}</span> : null}
       </p>
 
-      <Button type="submit" size="lg" full disabled={!canSubmit}>
-        {pending ? '등록 중…' : '등록'}
-      </Button>
+      {/* 전체 폭 버튼은 이 화면에서 제일 큰 요소가 되어 폼보다 눈에 먼저 들어온다.
+          오른쪽 끝에 취소와 나란히 두면 "다 적었으면 여기" 로 시선이 자연스럽게 내려온다. */}
+      <div className="flex items-center justify-end gap-2">
+        <Link href="/stock" className={buttonClass('secondary', 'lg')}>
+          취소
+        </Link>
+        <Button type="submit" size="lg" disabled={!canSubmit} className="min-w-32">
+          {pending ? '등록 중…' : '등록'}
+        </Button>
+      </div>
 
       {/* scanningKey 가 null 이 아닌 동안만 뜬다. onDetect 는 렌더마다 새로 만들어지지만
           BarcodeScanner 내부에서 항상 최신 콜백을 ref 로 읽으므로 scanningKey 가 바뀐

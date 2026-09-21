@@ -1,9 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { useActionState } from 'react'
 
-import { Button } from '@/components/ui/button'
+import { Button, buttonClass } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input, NumberInput } from '@/components/ui/field'
 import { cn } from '@/lib/cn'
@@ -174,31 +175,6 @@ export function EditProductForm({
             required
             maxLength={120}
           />
-          <CategorySelect
-            categories={categories}
-            value={categoryId}
-            onChange={setCategoryId}
-          />
-          {/* select 가 아니라 datalist 다 — 유통방식은 정해진 목록이 아니라
-              본사 사정으로 언제든 새 값이 생기는 말이라, 제안은 하되 자유
-              입력을 막으면 안 된다. */}
-          <Input
-            label="유통방식"
-            value={channel}
-            onChange={(e) => setChannel(e.target.value)}
-            placeholder="예: CJFW, 택배, 쿠팡"
-            maxLength={30}
-            list="channel-options"
-          />
-          <datalist id="channel-options">
-            {channels.map((c) => (
-              <option key={c} value={c} />
-            ))}
-          </datalist>
-          {/* 매장 POS 의 메뉴명. 발주 시트 이름과 실질적으로 다른 상품이 22% 라
-              (브랜드가 바뀐 것도 있다 — 킬로리 얌얌쉐이크 ↔ 데일리얌) 한쪽만
-              저장하면 발주할 때와 매장에서 찾을 때 서로 다른 말을 쓰게 된다.
-              여기 채우면 재고 검색이 이 이름으로도 걸린다. */}
           <Input
             label="POS 메뉴명"
             value={posName}
@@ -207,7 +183,36 @@ export function EditProductForm({
             maxLength={120}
             hint="매장 POS 에 등록된 이름. 발주 시트와 다를 때만 채우면 됩니다"
           />
-          <div className="grid grid-cols-2 gap-3">
+          {/* 분류와 유통은 짧은 값이라 한 줄에 둘. 세로로 쌓으면 상품명과 POS 명이
+              화면 위아래로 갈라져 같은 상품을 두 번 적는 느낌이 난다. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CategorySelect
+              categories={categories}
+              value={categoryId}
+              onChange={setCategoryId}
+            />
+            {/* select 가 아니라 datalist 다 — 유통방식은 정해진 목록이 아니라
+                본사 사정으로 언제든 새 값이 생기는 말이라, 제안은 하되 자유
+                입력을 막으면 안 된다. */}
+            <Input
+              label="유통방식"
+              value={channel}
+              onChange={(e) => setChannel(e.target.value)}
+              placeholder="예: CJFW, 택배, 쿠팡"
+              maxLength={30}
+              list="channel-options"
+            />
+            <datalist id="channel-options">
+              {channels.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </div>
+          {/* 매장 POS 의 메뉴명. 발주 시트 이름과 실질적으로 다른 상품이 22% 라
+              (브랜드가 바뀐 것도 있다 — 킬로리 얌얌쉐이크 ↔ 데일리얌) 한쪽만
+              저장하면 발주할 때와 매장에서 찾을 때 서로 다른 말을 쓰게 된다.
+              여기 채우면 재고 검색이 이 이름으로도 걸린다. */}
+          <div className="grid gap-4 sm:grid-cols-2">
             {/* 단위도 datalist — 자유 입력이고 추천은 고르기 편하라고만 있다. */}
             <Input
               label="단위 (세는 말)"
@@ -406,9 +411,16 @@ export function EditProductForm({
         ) : null}
       </p>
 
-      <Button type="submit" size="lg" full disabled={pending || !name.trim()}>
-        {pending ? '저장 중…' : '저장'}
-      </Button>
+      {/* 전체 폭 버튼은 이 화면에서 제일 큰 요소가 되어 폼보다 눈에 먼저 들어온다.
+          오른쪽 끝에 취소와 나란히 두면 "다 적었으면 여기" 로 시선이 자연스럽게 내려온다. */}
+      <div className="flex items-center justify-end gap-2">
+        <Link href="/stock" className={buttonClass('secondary', 'lg')}>
+          취소
+        </Link>
+        <Button type="submit" size="lg" disabled={pending || !name.trim()} className="min-w-32">
+          {pending ? '저장 중…' : '저장'}
+        </Button>
+      </div>
     </form>
 
       {/* updateProduct 와 별개 액션이라 위 <form> 밖에 둔다 — 같은 폼 안에 있으면
