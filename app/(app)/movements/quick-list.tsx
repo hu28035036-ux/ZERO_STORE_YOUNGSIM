@@ -102,7 +102,7 @@ export function QuickList({
               모두 해제
             </button>
           </div>
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-2">
             {displayPins.map((p) => (
               <li key={p.variantId}>
                 <QuickRow
@@ -140,7 +140,7 @@ export function QuickList({
           {pins.length > 0 ? (
             <h2 className="text-ink-muted px-1 text-xs font-semibold tracking-wide">검색 결과</h2>
           ) : null}
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-2">
             {results.map((row) => (
               <li key={row.variantId}>
                 <QuickRow

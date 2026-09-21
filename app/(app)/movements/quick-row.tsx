@@ -91,34 +91,36 @@ export function QuickRow({
   const unitLabel = target.unit || '개'
 
   return (
-    <Card className="flex flex-col gap-4 p-5">
-      {/* 머리: 상품 · 재고 배지. 고정/자세히는 아래 줄로 내려 이름 칸이 넓다 —
-          긴 상품명이 한 줄에 다 보여야 스캔 직후 "이 상품 맞나"를 바로 안다. */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-ink text-base leading-snug font-semibold">{target.productName}</p>
-          <p className="text-ink-muted mt-0.5 text-sm">
-            {target.optionLabel ? `${target.optionLabel} · ` : ''}
-            {formatWon(target.salePrice)}
-          </p>
-        </div>
-        <div className="shrink-0 pt-0.5">
-          <StockBadge qty={target.stockQty} threshold={target.threshold} unit={target.unit} />
-        </div>
-      </div>
-
-      <form action={formAction} className="flex flex-col gap-3">
+    <Card className="px-4 py-3">
+      {/* 한 줄 배치: 상품 · 종류 토글 · 수량 · 등록. 세로로 쌓으면 한 화면에 세 품목이
+          겨우 들어와서, 연달아 여러 상품을 손보는 사람이 계속 스크롤하게 된다. 좁은
+          화면(모바일)에서는 자연스럽게 두 줄로 접힌다. */}
+      <form action={formAction} className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <input type="hidden" name="variantId" value={target.variantId} />
         <input type="hidden" name="type" value={type} />
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex min-w-[14rem] flex-1 items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-ink truncate text-[0.9375rem] leading-snug font-semibold">
+              {target.productName}
+            </p>
+            <p className="text-ink-muted truncate text-xs">
+              {target.optionLabel ? `${target.optionLabel} · ` : ''}
+              {formatWon(target.salePrice)}
+            </p>
+          </div>
+          <div className="shrink-0">
+            <StockBadge qty={target.stockQty} threshold={target.threshold} unit={target.unit} />
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
           {/* 종류 선택은 세그먼트 컨트롤. 버튼 세 개가 각자 테두리를 가지면 "어느
-              것이 켜졌나"보다 "버튼이 셋"이 먼저 보인다. 홈통 하나에 선택만 흰
-              칸으로 띄우는 편이 한눈에 읽힌다. */}
+              것이 켜졌나"보다 "버튼이 셋"이 먼저 보인다. */}
           <div
             role="radiogroup"
             aria-label="종류"
-            className="bg-surface-sunken flex shrink-0 rounded-xl p-1"
+            className="bg-surface-sunken flex shrink-0 rounded-lg p-0.5"
           >
             {QUICK_TYPES.map((t) => {
               const on = type === t
@@ -130,7 +132,7 @@ export function QuickRow({
                   aria-checked={on}
                   onClick={() => setType(t)}
                   className={cn(
-                    'h-10 min-w-[4.25rem] flex-1 rounded-lg px-3 text-sm font-medium transition-[background-color,color,transform] duration-150 select-none active:scale-[0.97]',
+                    'h-9 min-w-[3.5rem] rounded-md px-2.5 text-sm font-medium transition-[background-color,color,transform] duration-150 select-none active:scale-[0.97]',
                     on
                       ? 'bg-surface text-primary shadow-sm font-semibold'
                       : 'text-ink-muted hover:text-ink',
@@ -142,72 +144,30 @@ export function QuickRow({
             })}
           </div>
 
-          <div className="flex min-w-0 flex-1 items-center gap-2 sm:max-w-md">
-            <NumberInput
-              name="qty"
-              value={qty}
-              onChange={(e) => setQty(e.target.value)}
-              placeholder={type === 'stocktake' ? '센 수량' : '수량'}
-              aria-label={`${target.productName} ${MOVEMENT_LABEL[type]} 수량`}
-              autoFocus={autoFocus}
-              className="bg-surface-sunken focus:bg-surface h-12 min-w-0 flex-1 rounded-xl border-transparent text-lg font-semibold sm:w-40"
-            />
-            <Button
-              type="submit"
-              size="lg"
-              disabled={!canSubmit}
-              className="h-12 shrink-0 rounded-xl px-6"
-            >
-              {pending ? '등록 중…' : '등록'}
-            </Button>
-          </div>
-        </div>
+          <NumberInput
+            name="qty"
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
+            placeholder={type === 'stocktake' ? '센 수량' : '수량'}
+            aria-label={`${target.productName} ${MOVEMENT_LABEL[type]} 수량`}
+            autoFocus={autoFocus}
+            className="bg-surface-sunken focus:bg-surface h-10 w-24 rounded-lg border-transparent font-semibold"
+          />
+          <Button
+            type="submit"
+            size="sm"
+            disabled={!canSubmit}
+            className="h-10 shrink-0 rounded-lg px-4"
+          >
+            {pending ? '등록 중…' : '등록'}
+          </Button>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          {/* 미리보기·결과가 같은 자리를 쓴다 — 줄이 아래로 덜컹거리지 않게 높이를 잡아둔다 */}
-          <p aria-live="polite" className="min-h-5 text-sm">
-            {state && 'error' in state ? (
-              <span className="text-danger">{state.error}</span>
-            ) : filled && (type === 'stocktake' || n >= 1) ? (
-              <>
-                <span className="text-ink-muted" data-numeric>
-                  {formatQty(target.stockQty)}
-                  {unitLabel}
-                </span>
-                <span className="text-ink-subtle"> → </span>
-                <span
-                  className={cn('font-semibold', after < 0 ? 'text-danger' : 'text-ink')}
-                  data-numeric
-                >
-                  {formatQty(after)}
-                  {unitLabel}
-                </span>
-                {after < 0 ? (
-                  <span className="text-low ml-2">재고가 음수가 됩니다</span>
-                ) : null}
-              </>
-            ) : state && 'ok' in state ? (
-              <span className="text-in">
-                반영됐습니다 — 현재{' '}
-                <span data-numeric>
-                  {formatQty(state.after)}
-                  {unitLabel}
-                </span>
-              </span>
-            ) : (
-              <span className="text-ink-subtle">
-                {type === 'stocktake' ? '실제로 센 수량을 넣으세요' : '수량을 넣으면 등록할 수 있어요'}
-              </span>
-            )}
-          </p>
-
-          <div className="flex shrink-0 items-center gap-1">
+          <div className="flex shrink-0 items-center">
             {onTogglePin ? (
-              // 검색할 때마다 결과가 바뀌어 이전에 보던 상품이 사라진다는 리포트.
-              // 체크한 줄은 quick-list 가 sessionStorage 에 들고 있어 안 사라진다.
+              // 체크한 줄은 quick-list 가 sessionStorage 에 들고 있어 검색해도 안 사라진다.
               <label
                 className={cn(
-                  'flex h-9 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-sm select-none transition-colors',
+                  'flex h-9 cursor-pointer items-center gap-1 rounded-md px-2 text-xs select-none transition-colors',
                   pinned
                     ? 'bg-primary-soft text-primary font-medium'
                     : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
@@ -217,19 +177,50 @@ export function QuickRow({
                   type="checkbox"
                   checked={pinned}
                   onChange={onTogglePin}
-                  className="accent-primary size-4"
+                  className="accent-primary size-3.5"
                 />
                 고정
               </label>
             ) : null}
             <Link
               href={`/movements?variant=${target.variantId}`}
-              className="text-ink-muted hover:bg-surface-sunken hover:text-ink flex h-9 items-center rounded-lg px-2.5 text-sm whitespace-nowrap transition-colors"
+              className="text-ink-muted hover:bg-surface-sunken hover:text-ink flex h-9 items-center rounded-md px-2 text-xs whitespace-nowrap transition-colors"
             >
               자세히
             </Link>
           </div>
         </div>
+
+        {/* 미리보기·결과·오류는 값이 있을 때만 한 줄 더 쓴다 — 평소엔 카드가 한 줄이다. */}
+        {state && 'error' in state ? (
+          <p aria-live="polite" className="text-danger w-full text-xs">
+            {state.error}
+          </p>
+        ) : filled && (type === 'stocktake' || n >= 1) ? (
+          <p aria-live="polite" className="w-full text-xs">
+            <span className="text-ink-muted" data-numeric>
+              {formatQty(target.stockQty)}
+              {unitLabel}
+            </span>
+            <span className="text-ink-subtle"> → </span>
+            <span
+              className={cn('font-semibold', after < 0 ? 'text-danger' : 'text-ink')}
+              data-numeric
+            >
+              {formatQty(after)}
+              {unitLabel}
+            </span>
+            {after < 0 ? <span className="text-low ml-2">재고가 음수가 됩니다</span> : null}
+          </p>
+        ) : state && 'ok' in state ? (
+          <p aria-live="polite" className="text-in w-full text-xs">
+            반영됐습니다 — 현재{' '}
+            <span data-numeric>
+              {formatQty(state.after)}
+              {unitLabel}
+            </span>
+          </p>
+        ) : null}
       </form>
     </Card>
   )
