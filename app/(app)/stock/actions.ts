@@ -9,6 +9,9 @@ import { fail, ok, type ActionState } from '@/lib/action-state'
 import { requireUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 
+import { fetchStockPage } from './list'
+import { FILTERS, SORTS, type SortKey, type StockFilter, type StockQuery } from './query'
+
 const axisSchema = z.object({
   name: z.string().trim().min(1).max(20),
   values: z.array(z.string().trim().min(1).max(30)).min(1).max(50),
@@ -385,4 +388,36 @@ export async function restoreProduct(productId: string): Promise<RestoreState> {
   revalidatePath('/')
   revalidatePath('/stats')
   return { ok: true }
+}
+
+// ---------------------------------------------------------------------------
+// 재고 목록 더 불러오기 (무한 스크롤)
+//
+// 조회 전용이라 revalidate 가 없다. 조건(query)은 클라이언트가 URL 에서 파싱한
+// 값을 되돌려주는 것이라 다시 검증한다 — 정렬 키를 그대로 order() 에 넘기면
+// 존재하지 않는 컬럼으로 400 이 나는 건 page.tsx 와 같은 이유다.
+// ---------------------------------------------------------------------------
+
+const loadMoreSchema = z.object({
+  q: z.string().trim().max(40),
+  filter: z.enum(FILTERS.filter((f) => f !== 'archived') as [StockFilter, ...StockFilter[]]),
+  sort: z.enum(Object.keys(SORTS) as [SortKey, ...SortKey[]]),
+  desc: z.boolean(),
+  offset: z.number().int().min(0).max(100_000),
+})
+
+export async function loadMoreStock(input: {
+  q: string
+  filter: StockFilter
+  sort: SortKey
+  desc: boolean
+  offset: number
+}) {
+  await requireUser()
+
+  const parsed = loadMoreSchema.safeParse(input)
+  if (!parsed.success) return { rows: [], total: 0, error: '잘못된 조회 조건입니다' }
+
+  const query: StockQuery = { ...parsed.data, archivedName: null }
+  return fetchStockPage(query, parsed.data.offset)
 }

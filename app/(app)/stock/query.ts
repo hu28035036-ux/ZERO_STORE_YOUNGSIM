@@ -54,11 +54,15 @@ export type SortKey = keyof typeof SORTS
 const SORT_KEYS = Object.keys(SORTS) as SortKey[]
 
 /**
- * 한 번에 가져올 최대 행수.
+ * 재고 목록을 한 번에 가져오는 행수. 화면 끝까지 스크롤하면 다음 30개를 더 받는다.
  *
- * 잘린 것을 화면에서 반드시 알려야 한다. 조용히 자르면 "우리 가게 물건이
- * 200개뿐"이라고 읽힌다.
+ * 처음엔 200개를 한 번에 받고 잘랐는데, 432개 품목이 되자 "200개까지만" 안내가
+ * 늘 떠 있어 전체를 못 보는 화면이 됐다. 30 은 한 화면 반 정도 — 첫 응답이
+ * 가볍고, 스크롤 두어 번이면 다음 묶음이 미리 붙어 끊김이 안 보인다.
  */
+export const PAGE_SIZE = 30
+
+/** 삭제됨 탭처럼 아직 페이지를 안 나눈 목록의 상한. */
 export const LIST_LIMIT = 200
 
 export type StockQuery = {

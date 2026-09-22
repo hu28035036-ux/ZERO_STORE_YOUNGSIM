@@ -9,16 +9,9 @@ import { getDevice } from '@/lib/server-device'
 import { createClient } from '@/lib/supabase/server'
 
 import { ArchivedTable, type ArchivedProduct } from './archived-table'
-import {
-  LIST_LIMIT,
-  likePattern,
-  productSearchFilter,
-  parseStockQuery,
-  SORTS,
-  type StockRow,
-} from './query'
-import { StockCards } from './stock-cards'
-import { StockTable } from './stock-table'
+import { fetchStockPage } from './list'
+import { LIST_LIMIT, likePattern, parseStockQuery } from './query'
+import { StockInfinite } from './stock-infinite'
 import { StockToolbar } from './stock-toolbar'
 
 export const metadata = { title: '재고' }
@@ -136,34 +129,9 @@ export default async function StockPage({
     )
   }
 
-  let list = supabase
-    .from('v_variant_stock')
-    .select('*')
-    // 판매 중지한 상품·변형은 재고 목록에서 뺀다. 되살리는 것은 이 화면의
-    // "삭제됨" 탭 몫이다.
-    .eq('is_active', true)
-    .eq('product_active', true)
-    .limit(LIST_LIMIT)
+  const [device, listResult] = await Promise.all([getDevice(), fetchStockPage(query, 0)])
 
-  if (query.filter === 'low') list = list.eq('is_low_stock', true)
-  if (query.filter === 'negative') list = list.eq('is_negative', true)
-
-  const pattern = likePattern(query.q)
-  if (pattern) {
-    // 상품명·POS 메뉴명·SKU·바코드를 한 번에 훑는다. 물건을 손에 들고 찾을 때
-    // 넷 중 무엇으로 찾을지는 그때그때 다르고, 매장 사람이 아는 이름은 발주명이
-    // 아니라 POS 메뉴명 쪽인 경우가 많다.
-    list = list.or(productSearchFilter(pattern))
-  }
-
-  list = list.order(SORTS[query.sort].column, { ascending: !query.desc })
-  if (query.sort !== 'name') list = list.order('product_name')
-  // 같은 상품 안에서는 옵션 순. 옵션 없는 변형(label = null)이 맨 위로 온다.
-  list = list.order('option_label', { nullsFirst: true })
-
-  const [device, listResult] = await Promise.all([getDevice(), list])
-
-  const rows = (listResult.data ?? []) as StockRow[]
+  const rows = listResult.rows
   const narrowed = Boolean(query.q) || query.filter !== 'all'
 
   return (
@@ -175,7 +143,7 @@ export default async function StockPage({
       {listResult.error ? (
         <Card className="p-5">
           <p className="text-danger text-sm font-medium">재고를 불러오지 못했습니다.</p>
-          <p className="text-ink-muted mt-1.5 text-sm">{listResult.error.message}</p>
+          <p className="text-ink-muted mt-1.5 text-sm">{listResult.error}</p>
         </Card>
       ) : rows.length === 0 ? (
         <Card className="p-5">
@@ -188,18 +156,18 @@ export default async function StockPage({
               : '위쪽 “상품 등록”으로 첫 상품을 넣으면 여기에 나타납니다.'}
           </p>
         </Card>
-      ) : device === 'mobile' ? (
-        <StockCards rows={rows} />
       ) : (
-        <StockTable rows={rows} query={query} />
+        // 첫 30개는 여기서 렌더하고, 나머지는 스크롤할 때 클라이언트가 받아 붙인다.
+        // key 에 조건을 넣어 검색·필터·정렬이 바뀌면 누적분을 통째로 버리게 한다.
+        <StockInfinite
+          key={`${query.q}|${query.filter}|${query.sort}|${query.desc}`}
+          initialRows={rows}
+          total={listResult.total}
+          query={query}
+          device={device === 'mobile' ? 'mobile' : 'desktop'}
+        />
       )}
-
-      {/* 잘렸으면 잘렸다고 말한다. 조용히 자르면 이게 전부인 줄 알게 된다. */}
-      {rows.length === LIST_LIMIT ? (
-        <p className="text-ink-muted text-center text-sm">
-          {LIST_LIMIT}개까지만 보여주고 있습니다. 검색어로 좁혀 주세요.
-        </p>
-      ) : null}
     </div>
   )
 }
+
