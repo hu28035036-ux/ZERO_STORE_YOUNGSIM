@@ -22,13 +22,11 @@ import { PageHeader } from '@/components/ui/page-header'
 import { formatQty, formatWon, todayInSeoul } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 
-import { addDays } from './stats/period'
+import { addDays, presetRange } from './stats/period'
 import { TopSellersCard } from './top-sellers-card'
 
 export const metadata = { title: '홈' }
 
-/** 원그래프가 보는 기간(일). 판매는 파일로 몰아서 반영되므로 7일은 비어 보이는 날이 많다. */
-const TOP_DAYS = 30
 /** 부족 목록에 펼쳐 보여줄 상품 수. 건수·수량 합계는 이 상한과 무관하게 전체를 센다. */
 const LOW_LIST = 5
 
@@ -58,9 +56,11 @@ export default async function HomePage() {
   const supabase = await createClient()
   const today = todayInSeoul()
   const yesterday = addDays(today, -1)
-  const topFrom = addDays(today, -(TOP_DAYS - 1))
-
-  const topRange = { p_from: topFrom, p_to: today }
+  // 원그래프·순위는 이번 달(1일~오늘). 사용자가 "매달" 단위로 본다고 해서 최근 30일에서
+  // 바꿨다 — 달 초에는 며칠치만 보이지만, 통계 화면의 '이번 달' 프리셋과 숫자가 같아진다.
+  const month = presetRange('month', today)
+  const topRange = { p_from: month.from, p_to: month.to }
+  const monthLabel = `${Number(today.slice(5, 7))}월`
 
   const [valuation, lowStock, todaySummary, yesterdaySummary, byCategory, top, integrity] =
     await Promise.all([
@@ -154,9 +154,9 @@ export default async function HomePage() {
         <TopSellersCard
           categories={byCategory.data ?? []}
           products={top.data ?? []}
-          from={topFrom}
-          to={today}
-          dayLabel={`최근 ${TOP_DAYS}일`}
+          from={month.from}
+          to={month.to}
+          dayLabel={monthLabel}
         />
 
         <div className="flex flex-col gap-4">

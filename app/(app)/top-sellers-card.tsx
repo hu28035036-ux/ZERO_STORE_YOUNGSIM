@@ -102,7 +102,7 @@ export function TopSellersCard({
   products: TopProduct[]
   from: string
   to: string
-  /** 카드 설명에 들어갈 기간 이름. "최근 30일" 처럼. */
+  /** 카드 설명에 들어갈 기간 이름. "9월" 처럼. */
   dayLabel: string
 }) {
   const { slices, total } = toSlices(categories)
@@ -134,7 +134,7 @@ export function TopSellersCard({
       <CardHeader>
         <div>
           <CardTitle>잘 팔리는 것</CardTitle>
-          <CardDescription>{dayLabel} 판매 수량 기준 · 모두 {formatQty(total)}점</CardDescription>
+          <CardDescription>{dayLabel} 판매 수량 기준 · 모두 {formatQty(total)}개</CardDescription>
         </div>
         <Link
           href={`/stats?from=${from}&to=${to}`}
@@ -194,7 +194,7 @@ export function TopSellersCard({
                   textAnchor="middle"
                   className="fill-ink-muted text-[11px]"
                 >
-                  점 판매
+                  개 판매
                 </text>
               </svg>
 
@@ -211,7 +211,7 @@ export function TopSellersCard({
                       </span>
                       <span className="shrink-0 text-right" data-numeric>
                         <span className="text-ink text-sm font-semibold">{s.share}%</span>
-                        <span className="text-ink-subtle ml-2 text-xs">{formatQty(s.qty)}점</span>
+                        <span className="text-ink-subtle ml-2 text-xs">{formatQty(s.qty)}개</span>
                       </span>
                     </li>
                   ))}
@@ -248,7 +248,7 @@ export function TopSellersCard({
                   </span>
                 </span>
                 <span className="text-ink w-16 shrink-0 text-right text-sm font-semibold" data-numeric>
-                  {formatQty(r.qty)}점
+                  {formatQty(r.qty)}개
                 </span>
               </li>
             ))}
