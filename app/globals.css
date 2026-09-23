@@ -238,9 +238,25 @@
   animation: donut-reveal 900ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
 }
 
+/* 순위 목록의 가로 막대가 왼쪽부터 차오른다. 목표 폭은 인라인 width 에 있으므로
+   from 만 적는다. 같은 900ms — 숫자·원그래프와 한 박자에 멈추어야 한다. */
+@keyframes bar-grow {
+  from {
+    width: 0;
+  }
+}
+
+.bar-grow {
+  animation: bar-grow 900ms cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .donut-reveal {
     animation: none;
     stroke-dashoffset: 0;
+  }
+
+  .bar-grow {
+    animation: none;
   }
 }

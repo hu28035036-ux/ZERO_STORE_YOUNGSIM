@@ -265,7 +265,7 @@ export function TopSellersCard({
                   </span>
                   <span className="bg-surface-sunken mt-1 block h-1.5 w-full overflow-hidden rounded-[3px]">
                     <span
-                      className="bg-primary block h-full rounded-[3px]"
+                      className="bg-primary bar-grow block h-full rounded-[3px]"
                       style={{ width: `${maxQty > 0 ? (r.qty / maxQty) * 100 : 0}%` }}
                     />
                   </span>
