@@ -28,7 +28,8 @@ export function ScanButton({ inputName }: { inputName: string }) {
       <Button
         type="button"
         variant="secondary"
-        className="shrink-0"
+        // 좁은 화면에서 검색칸이 줄어들 때 이 버튼도 같이 눌려 찌그러졌다 — 폭·높이를 못 박는다.
+        className="h-11 w-11 shrink-0 px-0"
         aria-label="카메라로 바코드 검색"
         onClick={(event) => {
           formRef.current = event.currentTarget.form

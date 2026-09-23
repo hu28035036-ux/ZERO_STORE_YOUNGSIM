@@ -103,7 +103,8 @@ export function StatTile({
       */}
       <div
         className={cn(
-          'mt-2 text-[1.625rem] leading-tight font-semibold tracking-tight',
+          // 휴대폰 두 열 카드에서 "12,513,589원" 이 두 줄로 꺾였다 — 좁을 땐 한 단계 작게.
+          'mt-2 text-xl leading-tight font-semibold tracking-tight whitespace-nowrap sm:text-[1.625rem]',
           toneClass,
         )}
       >

@@ -142,7 +142,7 @@ export default async function StatsPage({
             to={period.to}
           />
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid min-w-0 gap-6 lg:grid-cols-2">
             <TopProductsTable rows={top.data ?? []} />
             <CategoryTable rows={byCategory.data ?? []} />
           </div>

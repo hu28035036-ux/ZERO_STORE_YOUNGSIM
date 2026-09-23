@@ -17,7 +17,7 @@ import { FILTER_LABEL, FILTERS, stockHref, type StockQuery } from './query'
 export function StockToolbar({ query }: { query: StockQuery }) {
   return (
     <Card className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-      <form action="/stock" className="flex min-w-0 flex-1 gap-2">
+      <form action="/stock" className="flex w-full min-w-0 gap-2 sm:w-auto sm:flex-1">
         {/* 검색해도 보던 필터·정렬은 유지되어야 한다. */}
         {query.filter !== 'all' ? (
           <input type="hidden" name="filter" value={query.filter} />
@@ -57,7 +57,7 @@ export function StockToolbar({ query }: { query: StockQuery }) {
         </button>
       </form>
 
-      <div className="flex gap-1.5 overflow-x-auto">
+      <div className="flex w-full gap-1.5 overflow-x-auto sm:w-auto">
         {FILTERS.map((f) => {
           const on = query.filter === f
           return (

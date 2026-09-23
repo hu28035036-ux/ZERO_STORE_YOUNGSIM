@@ -38,7 +38,9 @@ export function TopProductsTable({ rows }: { rows: TopProduct[] }) {
   const max = rows.reduce((m, r) => Math.max(m, Number(r.revenue ?? 0)), 0)
 
   return (
-    <Card>
+    // min-w-0: 그리드 칸 안에서 표가 min-content 폭을 요구하면 카드가 화면 밖으로
+    // 자란다(휴대폰에서 실제로 잘렸다). 칸이 줄어들 수 있어야 overflow-x-auto 가 산다.
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>많이 팔린 상품</CardTitle>
         <span className="text-ink-muted text-xs">매출순</span>
@@ -116,7 +118,7 @@ export function CategoryTable({ rows }: { rows: CategoryStat[] }) {
   const max = rows.reduce((m, r) => Math.max(m, Number(r.revenue ?? 0)), 0)
 
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>카테고리별</CardTitle>
       </CardHeader>
@@ -174,7 +176,7 @@ export function SupplierTable({ rows }: { rows: SupplierStat[] }) {
   const max = rows.reduce((m, r) => Math.max(m, Number(r.purchase_amount ?? 0)), 0)
 
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>거래처별 매입</CardTitle>
       </CardHeader>
@@ -232,7 +234,7 @@ export function SupplierTable({ rows }: { rows: SupplierStat[] }) {
 
 export function TurnoverTable({ rows }: { rows: TurnoverStat[] }) {
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader>
         <CardTitle>재고 회전</CardTitle>
         {/* 스키마 주석이 요구하는 표기다. 정확한 회전율은 일별 재고 스냅샷이

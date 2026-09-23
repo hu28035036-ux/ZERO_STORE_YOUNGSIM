@@ -89,23 +89,31 @@ export function TabNav({
   compact?: boolean
 }) {
   return (
-    <nav aria-label="주요 메뉴" className="mx-auto w-full max-w-[1280px] overflow-x-auto px-4">
-      <ul className="flex gap-0.5">
+    <nav
+      aria-label="주요 메뉴"
+      className={cn('mx-auto w-full max-w-[1280px]', compact ? 'px-1' : 'overflow-x-auto px-4')}
+    >
+      {/* compact(휴대폰)는 탭 다섯 개를 같은 폭으로 나눠 390px 에 다 넣는다. 가로
+          스크롤로 두면 마지막 탭(설정)이 있는 줄도 모르고 지나간다 — 실제로 잘렸다. */}
+      <ul className={cn('flex', compact ? 'w-full' : 'gap-0.5')}>
         {items.map((item) => {
           const active = isActive(pathname, item.href)
           const Icon = item.icon
           return (
-            <li key={item.href} className="shrink-0">
+            <li key={item.href} className={compact ? 'min-w-0 flex-1' : 'shrink-0'}>
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'relative flex items-center gap-2 rounded-t-lg px-3 text-sm font-medium transition-colors',
+                  'relative flex items-center rounded-t-lg font-medium transition-colors',
+                  compact
+                    ? 'h-11 flex-col justify-center gap-0.5 px-0 text-[0.6875rem]'
+                    : 'h-11 gap-2 px-3 text-sm',
                   'hover:bg-ink/[0.06] active:bg-ink/[0.12]',
-                  compact ? 'h-10' : 'h-11',
                   active ? 'text-ink-strong font-semibold' : 'text-ink-muted',
                   // 밑줄. 색이 아니라 자리로 "여기" 를 말한다.
-                  'after:bg-ink-strong after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:origin-center after:scale-x-0 after:transition-transform after:duration-200',
+                  'after:bg-ink-strong after:absolute after:-bottom-px after:h-0.5 after:origin-center after:scale-x-0 after:transition-transform after:duration-200',
+                  compact ? 'after:inset-x-3' : 'after:inset-x-2',
                   active && 'after:scale-x-100',
                 )}
               >

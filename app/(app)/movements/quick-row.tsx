@@ -114,7 +114,9 @@ export function QuickRow({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        {/* 좁은 화면에서는 이 묶음이 줄바꿈된다 — 고정·자세히가 다음 줄로 내려간다.
+            shrink-0 으로 고정하면 390px 에서 오른쪽으로 잘려 나갔다. */}
+        <div className="flex flex-wrap items-center gap-2">
           {/* 종류 선택은 세그먼트 컨트롤. 버튼 세 개가 각자 테두리를 가지면 "어느
               것이 켜졌나"보다 "버튼이 셋"이 먼저 보인다. */}
           <div
@@ -151,7 +153,7 @@ export function QuickRow({
             placeholder={type === 'stocktake' ? '센 수량' : '수량'}
             aria-label={`${target.productName} ${MOVEMENT_LABEL[type]} 수량`}
             autoFocus={autoFocus}
-            className="bg-surface-sunken focus:bg-surface h-10 w-24 rounded-lg border-transparent font-semibold"
+            className="bg-surface-sunken focus:bg-surface h-10 w-20 min-w-0 rounded-lg border-transparent font-semibold sm:w-24"
           />
           <Button
             type="submit"
@@ -162,7 +164,7 @@ export function QuickRow({
             {pending ? '등록 중…' : '등록'}
           </Button>
 
-          <div className="flex shrink-0 items-center">
+          <div className="flex items-center">
             {onTogglePin ? (
               // 체크한 줄은 quick-list 가 sessionStorage 에 들고 있어 검색해도 안 사라진다.
               <label
