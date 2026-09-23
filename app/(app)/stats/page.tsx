@@ -1,9 +1,10 @@
 import { ArrowDown, ArrowUp, BarChart3, Minus, ReceiptText, ShoppingBag, Wallet } from 'lucide-react'
 
 import { Card, StatTile } from '@/components/ui/card'
+import { CountUp } from '@/components/ui/count-up'
 import { PageHeader } from '@/components/ui/page-header'
 import { cn } from '@/lib/cn'
-import { formatQty, formatWon } from '@/lib/constants'
+import { formatQty } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 
 import { DailyChart } from './daily-chart'
@@ -103,26 +104,26 @@ export default async function StatsPage({
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatTile
               label="매출"
-              value={formatWon(revenue)}
+              value={<CountUp value={revenue} format="won" />}
               hint={<Delta current={revenue} previous={Number(before?.revenue ?? 0)} />}
               icon={ReceiptText}
             />
             <StatTile
               label="마진"
-              value={formatWon(margin)}
+              value={<CountUp value={margin} format="won" />}
               tone={margin < 0 ? 'loss' : 'profit'}
               hint={`마진율 ${now?.margin_rate ?? 0}%`}
               icon={BarChart3}
             />
             <StatTile
               label="판매 건수"
-              value={`${formatQty(orders)}건`}
+              value={<CountUp value={orders} format="qty" suffix="건" />}
               hint={`${formatQty(Number(now?.qty_sold ?? 0))}점`}
               icon={ShoppingBag}
             />
             <StatTile
               label="객단가"
-              value={formatWon(now?.avg_order_value)}
+              value={<CountUp value={Number(now?.avg_order_value ?? 0)} format="won" />}
               hint={
                 <Delta
                   current={Number(now?.avg_order_value ?? 0)}

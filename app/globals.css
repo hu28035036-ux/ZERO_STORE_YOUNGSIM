@@ -250,13 +250,25 @@
   animation: bar-grow 900ms cubic-bezier(0.33, 1, 0.68, 1) both;
 }
 
+/* 세로 막대(통계 매출 추이)가 바닥부터 차오른다. 목표 높이는 인라인 height. */
+@keyframes bar-rise {
+  from {
+    height: 0;
+  }
+}
+
+.bar-rise {
+  animation: bar-rise 900ms cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .donut-reveal {
     animation: none;
     stroke-dashoffset: 0;
   }
 
-  .bar-grow {
+  .bar-grow,
+  .bar-rise {
     animation: none;
   }
 }

@@ -19,7 +19,7 @@ function Bar({ value, max }: { value: number; max: number }) {
   const pct = max > 0 ? Math.max(0, (value / max) * 100) : 0
   return (
     <div className="bg-surface-sunken h-2 w-full overflow-hidden rounded-[4px]">
-      <div className="bg-primary h-full rounded-[4px]" style={{ width: `${pct}%` }} />
+      <div className="bg-primary bar-grow h-full rounded-[4px]" style={{ width: `${pct}%` }} />
     </div>
   )
 }
