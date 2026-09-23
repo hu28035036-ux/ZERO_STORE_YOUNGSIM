@@ -63,7 +63,7 @@ export default async function HomePage() {
   const topRange = { p_from: month.from, p_to: month.to }
   const monthLabel = `${Number(today.slice(5, 7))}월`
 
-  const [valuation, lowStock, todaySummary, yesterdaySummary, byCategory, top, integrity] =
+  const [valuation, lowStock, monthSummary, yesterdaySummary, byCategory, top, integrity] =
     await Promise.all([
       supabase.from('v_stock_valuation').select('*').maybeSingle(),
       // limit 을 걸지 않는다 — 5개만 받으면 "재고 부족 5건" 이 상한에 걸린 숫자인지
@@ -73,7 +73,9 @@ export default async function HomePage() {
         .from('v_low_stock')
         .select('variant_id, product_name, option_label, stock_qty, low_stock_threshold, unit')
         .order('stock_qty'),
-      supabase.rpc('stats_summary', { p_from: today, p_to: today }),
+      // 월 매출은 원그래프와 같은 범위(이번 달 1일~오늘)를 본다. 판매가 파일로 몰아서
+      // 반영되므로 "오늘 매출" 은 거의 항상 0 이었다 — 사용자가 월로 바꿨달라고 했다.
+      supabase.rpc('stats_summary', topRange),
       supabase.rpc('stats_summary', { p_from: yesterday, p_to: yesterday }),
       supabase.rpc('stats_by_category', topRange),
       // 함수는 매출 순으로 잘라 주는데 순위 목록은 수량 순이다. 값싼 상품이 매출 순위
@@ -85,7 +87,7 @@ export default async function HomePage() {
     ])
 
   const stock = valuation.data
-  const todaySales = todaySummary.data?.[0]
+  const monthSales = monthSummary.data?.[0]
   const yesterdaySales = yesterdaySummary.data?.[0]
   const lowRows = lowStock.data ?? []
   const lowCount = lowRows.length
@@ -100,7 +102,7 @@ export default async function HomePage() {
       <PageHeader
         eyebrow="STORE OVERVIEW"
         title="오늘의 매장"
-        description="어제 매출, 잘 팔리는 상품, 채워야 할 재고를 한눈에."
+        description="이번 달 매출, 잘 팔리는 상품, 채워야 할 재고를 한눈에."
         actions={
           <Link href="/stock" className={buttonClass('black')}>
             재고 보기
@@ -110,15 +112,15 @@ export default async function HomePage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
-          label="어제 매출"
-          value={<CountUp value={Number(yesterdaySales?.revenue ?? 0)} format="won" />}
-          hint={`${yesterdaySales?.order_count ?? 0}건 · 마진 ${formatWon(yesterdaySales?.margin)}`}
+          label={`${monthLabel} 매출`}
+          value={<CountUp value={Number(monthSales?.revenue ?? 0)} format="won" />}
+          hint={`${monthSales?.order_count ?? 0}건 · 마진 ${formatWon(monthSales?.margin)}`}
           icon={CalendarDays}
         />
         <StatTile
-          label="오늘 매출"
-          value={<CountUp value={Number(todaySales?.revenue ?? 0)} format="won" />}
-          hint={`${todaySales?.order_count ?? 0}건 · 마진 ${formatWon(todaySales?.margin)}`}
+          label="어제 매출"
+          value={<CountUp value={Number(yesterdaySales?.revenue ?? 0)} format="won" />}
+          hint={`${yesterdaySales?.order_count ?? 0}건 · 마진 ${formatWon(yesterdaySales?.margin)}`}
           icon={ReceiptText}
         />
         <StatTile
