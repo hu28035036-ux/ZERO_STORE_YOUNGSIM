@@ -66,7 +66,8 @@ export function StatTile({
   className,
 }: {
   label: string
-  value: string
+  /** 문자열이거나, 홈처럼 0 부터 올라가는 `<CountUp>`. */
+  value: React.ReactNode
   /** 값 뒤에 작게 붙는 단위. formatWon 처럼 값에 이미 단위가 있으면 비운다. */
   unit?: string
   /** 라벨 오른쪽 작은 픽토그램. 네 개가 나란히 설 때 무슨 숫자인지 먼저 잡아준다. */

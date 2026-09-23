@@ -223,3 +223,24 @@
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* 홈 원그래프가 12시부터 한 바퀵 그려지는 마스크. 조각마다 따로 움직이지 않고 마스크
+   하나만 돌린다 — 조각별로 지연을 주면 조각 수에 따라 전체 시간이 달라져 숫자 카운트와
+   어긋난다. 시간은 count-up.tsx 의 COUNT_UP_MS 와 같아야 한다. 시작 offset 은
+   속성으로 넣어 둘 테니 to 만 적는다. */
+@keyframes donut-reveal {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.donut-reveal {
+  animation: donut-reveal 900ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .donut-reveal {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

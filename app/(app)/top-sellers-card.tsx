@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { Card, CardBody, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { CountUp } from '@/components/ui/count-up'
 import { formatQty } from '@/lib/constants'
 
 import type { CategoryStat, TopProduct } from './stats/stats-tables'
@@ -163,8 +164,26 @@ export function TopSellersCard({
                   .map((s) => `${s.name} ${s.share}%`)
                   .join(', ')}.`}
               >
+                <defs>
+                  {/* 마스크의 선이 차오르면서 아래 조각들이 순서대로 드러난다. 조각 두께보다 조금
+                      두껍게 그려 가장자리 안티에일리어싱이 잘리지 않게 한다. */}
+                  <mask id="donut-reveal" maskUnits="userSpaceOnUse">
+                    <circle
+                      cx={SIZE / 2}
+                      cy={SIZE / 2}
+                      r={R}
+                      fill="none"
+                      stroke="#fff"
+                      strokeWidth={STROKE + 2}
+                      strokeDasharray={C}
+                      strokeDashoffset={C}
+                      transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
+                      className="donut-reveal"
+                    />
+                  </mask>
+                </defs>
                 {/* 12시 방향에서 시계 방향으로 시작하도록 -90도 돌린다. */}
-                <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}>
+                <g transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`} mask="url(#donut-reveal)">
                   {arcs.map((a) => (
                     <circle
                       key={a.key}
@@ -186,7 +205,7 @@ export function TopSellersCard({
                   textAnchor="middle"
                   className="fill-ink text-[22px] font-semibold"
                 >
-                  {formatQty(total)}
+                  <CountUp value={total} format="qty" />
                 </text>
                 <text
                   x="50%"
@@ -210,8 +229,12 @@ export function TopSellersCard({
                         {s.name}
                       </span>
                       <span className="shrink-0 text-right" data-numeric>
-                        <span className="text-ink text-sm font-semibold">{s.share}%</span>
-                        <span className="text-ink-subtle ml-2 text-xs">{formatQty(s.qty)}개</span>
+                        <span className="text-ink text-sm font-semibold">
+                          <CountUp value={s.share} format="percent" suffix="%" />
+                        </span>
+                        <span className="text-ink-subtle ml-2 text-xs">
+                          <CountUp value={s.qty} format="qty" suffix="개" />
+                        </span>
                       </span>
                     </li>
                   ))}
@@ -248,7 +271,7 @@ export function TopSellersCard({
                   </span>
                 </span>
                 <span className="text-ink w-16 shrink-0 text-right text-sm font-semibold" data-numeric>
-                  {formatQty(r.qty)}개
+                  <CountUp value={r.qty} format="qty" suffix="개" />
                 </span>
               </li>
             ))}

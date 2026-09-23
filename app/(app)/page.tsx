@@ -18,6 +18,7 @@ import {
   CardTitle,
   StatTile,
 } from '@/components/ui/card'
+import { CountUp } from '@/components/ui/count-up'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatQty, formatWon, todayInSeoul } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
@@ -110,19 +111,19 @@ export default async function HomePage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
           label="어제 매출"
-          value={formatWon(yesterdaySales?.revenue)}
+          value={<CountUp value={Number(yesterdaySales?.revenue ?? 0)} format="won" />}
           hint={`${yesterdaySales?.order_count ?? 0}건 · 마진 ${formatWon(yesterdaySales?.margin)}`}
           icon={CalendarDays}
         />
         <StatTile
           label="오늘 매출"
-          value={formatWon(todaySales?.revenue)}
+          value={<CountUp value={Number(todaySales?.revenue ?? 0)} format="won" />}
           hint={`${todaySales?.order_count ?? 0}건 · 마진 ${formatWon(todaySales?.margin)}`}
           icon={ReceiptText}
         />
         <StatTile
           label="재고 부족"
-          value={`${lowCount}건`}
+          value={<CountUp value={lowCount} format="qty" suffix="건" />}
           hint={
             lowCount > 0
               ? `기준까지 ${formatQty(shortageTotal)}개 모자람`
@@ -133,7 +134,7 @@ export default async function HomePage() {
         />
         <StatTile
           label="재고 자산"
-          value={formatWon(stock?.total_cost_value)}
+          value={<CountUp value={Number(stock?.total_cost_value ?? 0)} format="won" />}
           hint={`${stock?.variant_count ?? 0}개 품목`}
           icon={Boxes}
         />
