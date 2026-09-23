@@ -62,6 +62,17 @@
   --profit: #15803d;         /* 마진 흑자 */
   --loss: #dc2626;           /* 마진 적자 — 원가가 판매가보다 높은 경우 */
 
+  /* --- 범주형 차트 --------------------------------------------------------
+     원그래프처럼 조각마다 다른 것을 가리켜야 할 때만 쓴다. 한 계열 막대는
+     여전히 primary 하나다. 첫 색을 primary 와 같게 둬서 "가장 큰 조각" 이
+     화면의 포인트 색과 이어지게 한다. rest 는 "그 밖의 것" 묶음 전용 회색. */
+  --chart-1: #0f4cff;
+  --chart-2: #0d9488;
+  --chart-3: #f59e0b;
+  --chart-4: #7c3aed;
+  --chart-5: #db2777;
+  --chart-rest: #cbd1da;
+
   --focus: #0f4cff;
 }
 
@@ -100,6 +111,13 @@
 
     --profit: #4ade80;
     --loss: #f87171;
+
+    --chart-1: #3b82f6;
+    --chart-2: #2dd4bf;
+    --chart-3: #fbbf24;
+    --chart-4: #a78bfa;
+    --chart-5: #f472b6;
+    --chart-rest: #3f3f46;
 
     --focus: #60a5fa;
   }
@@ -140,6 +158,13 @@
 
   --color-profit: var(--profit);
   --color-loss: var(--loss);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-rest: var(--chart-rest);
 
   /* 손가락 최소 크기. 계산대에서 한 손으로 쓰는 화면이라 넉넉하게 잡는다.
      44px 는 접근성 가이드의 하한이고, 주요 동작은 56px 를 쓴다. */
