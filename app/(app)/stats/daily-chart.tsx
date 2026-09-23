@@ -91,6 +91,8 @@ export function DailyChart({
   to: string
 }) {
   const [grain, setGrain] = useState<Grain>('day')
+  // 마우스를 올린 막대. 브라우저 title 툴팁은 1초 뒤에야 떠서 막대를 훑을 때 쓸모가 없다.
+  const [hover, setHover] = useState<string | null>(null)
   const buckets = bucketize(points, from, to, grain)
 
   const max = buckets.reduce((m, d) => Math.max(m, d.revenue), 0)
@@ -153,18 +155,48 @@ export function DailyChart({
               role="img"
               aria-label={`${first.label}부터 ${last.label}까지 ${GRAIN_LABEL[grain]} 매출 막대그래프. 최고 ${formatWon(max)}.`}
             >
-              {buckets.map((d) => (
-                <div
-                  key={d.key}
-                  className={cn(col, 'h-full justify-end')}
-                  title={`${d.label} · ${formatWon(d.revenue)}`}
-                >
+              {buckets.map((d, i) => {
+                const on = hover === d.key
+                // 양 끝 근처의 말풍선은 가운데 정렬하면 카드 밖으로 잘린다. 앞 15% 는 왼쪽에, 뒤 15% 는 오른쪽에 붙인다.
+                const edge =
+                  i < buckets.length * 0.15
+                    ? 'left-0'
+                    : i > buckets.length * 0.85
+                      ? 'right-0'
+                      : 'left-1/2 -translate-x-1/2'
+                return (
                   <div
-                    className="bg-primary bar-rise w-full rounded-t-[4px]"
-                    style={{ height: `${(d.revenue / max) * 100}%` }}
-                  />
-                </div>
-              ))}
+                    key={d.key}
+                    className={cn(col, 'relative h-full justify-end')}
+                    onPointerEnter={() => setHover(d.key)}
+                    onPointerLeave={() => setHover(null)}
+                  >
+                    {on ? (
+                      <div
+                        role="tooltip"
+                        className={cn(
+                          'bg-ink-strong text-ink-inverted pointer-events-none absolute z-10 rounded-md px-2 py-1 text-xs whitespace-nowrap shadow-sm',
+                          edge,
+                        )}
+                        style={{ bottom: `calc(${(d.revenue / max) * 100}% + 6px)` }}
+                      >
+                        <span className="text-ink-inverted/70 mr-1.5">{d.label}</span>
+                        <span className="font-semibold" data-numeric>
+                          {formatWon(d.revenue)}
+                        </span>
+                      </div>
+                    ) : null}
+                    <div
+                      className={cn(
+                        'bar-rise w-full rounded-t-[4px] transition-colors',
+                        // 같은 계열은 한 색이다. 올린 막대만 한 단 진해지는 건 크기가 아니라 "지금 이거" 를 말하는 것.
+                        on ? 'bg-primary-hover' : 'bg-primary',
+                      )}
+                      style={{ height: `${(d.revenue / max) * 100}%` }}
+                    />
+                  </div>
+                )
+              })}
             </div>
 
             {/* 기준선은 실선 헤어라인. 점선은 "예상치"나 "임계값"으로 읽힌다. */}
