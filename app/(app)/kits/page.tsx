@@ -33,7 +33,7 @@ export default async function KitsPage() {
         backHref="/settings"
         backLabel="설정으로 돌아가기"
         actions={
-          <Link href="/kits/new" className={buttonClass('primary')}>
+          <Link href="/kits/new" className={buttonClass('black')}>
             <Plus className="h-4 w-4" />
             박스 만들기
           </Link>

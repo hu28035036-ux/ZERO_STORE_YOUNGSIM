@@ -29,7 +29,7 @@ export const viewport: Viewport = {
   // 되는 쪽이, 입력창에서 화면이 잠깐 확대되는 것보다 훨씬 나쁘다.
   // (iOS 확대 문제는 입력 글자 크기를 16px 이상으로 두어 해결했다)
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#f4f4f5' },
+    { media: '(prefers-color-scheme: light)', color: '#f6f7f9' },
     { media: '(prefers-color-scheme: dark)', color: '#09090b' },
   ],
 }

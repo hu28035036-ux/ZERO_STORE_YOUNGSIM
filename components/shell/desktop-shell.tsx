@@ -7,15 +7,11 @@ import { cn } from '@/lib/cn'
 import { isActive, NAV } from '@/lib/nav'
 
 /**
- * 데스크톱 셸: 왼쪽 사이드바 + 상단 바 + 본문.
+ * 데스크톱 셸: 상단 바 + 탭 내비 + 본문 (2026-09-21 2차 리디자인, A2 Vercel 식).
  *
- * 여기서는 홈을 포함한 전체 메뉴를 편다. 큰 화면에서는 요약 대시보드가
- * 실제로 쓸모가 있고, 세로 공간이 남아서 항목을 줄일 이유도 없다.
- *
- * 상단 바(2026-09 리디자인)는 "내 매장 / 재고" 같은 현재 위치와 오늘 날짜만
- * 보여준다. 검색이나 알림 같은 걸 넣지 않는 이유: 이 앱의 검색은 화면마다
- * 대상이 다르고(재고는 상품, 기록은 내역), 전역 검색 하나로 뭉치면 어느 결과가
- * 나올지 예측이 안 된다.
+ * 사이드바를 없앤 이유: 재고 표가 이 앱의 중심인데 사이드바 224px 가 표의
+ * 가로폭을 먹어 상품명이 두 줄로 꺾였다. 메뉴는 여섯 개뿐이라 위로 올려도
+ * 한 줄에 다 들어간다. 활성 탭은 검정 밑줄 — 색이 아니라 위치로 말한다.
  */
 export function DesktopShell({
   storeName,
@@ -30,93 +26,103 @@ export function DesktopShell({
 }) {
   const pathname = usePathname()
   const current = NAV.find((item) => isActive(pathname, item.href))
-  const initial = (userName ?? '사용자').trim().charAt(0) || '사'
 
   return (
-    <div className="flex min-h-full flex-1">
-      <aside className="bg-surface-nav border-border-base sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r px-4 pt-7 pb-5">
-        <div className="flex items-center gap-3 px-2 pb-7">
-          {/* 로고 자리. 이미지가 없으니 가게 첫 글자로 대신한다 — 사이드바 맨 위가
-              글자만 있으면 메뉴의 한 항목처럼 보여서 "여기가 시작"이라는 표시가 필요하다. */}
-          <span
-            aria-hidden
-            className="bg-primary text-primary-ink inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg font-semibold"
-          >
-            {storeName.trim().charAt(0) || 'Z'}
-          </span>
-          <div className="min-w-0">
-            <div className="text-ink truncate text-sm font-semibold">{storeName}</div>
-            <div className="text-ink-subtle mt-0.5 text-[0.625rem] tracking-[0.2em]">
-              ZERO STORE
-            </div>
+    <div className="flex min-h-full flex-1 flex-col">
+      <header className="bg-surface-nav border-border-base sticky top-0 z-20 border-b">
+        <div className="mx-auto flex h-14 w-full max-w-[1280px] items-center justify-between px-7">
+          <div className="flex min-w-0 items-center gap-3">
+            <Brand storeName={storeName} />
+            <p className="text-ink-subtle ml-3 hidden items-center gap-2 text-xs sm:flex">
+              <span aria-hidden>/</span>
+              <span className="text-ink font-semibold">{current?.label ?? '홈'}</span>
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <TodayLabel />
+            {onSignOut}
+            <span
+              aria-hidden
+              className="bg-primary-soft text-primary inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
+            >
+              {(userName ?? '사용자').trim().charAt(0) || '사'}
+            </span>
           </div>
         </div>
+        <TabNav pathname={pathname} />
+      </header>
 
-        <p className="text-ink-subtle px-3 pb-2 text-[0.625rem] font-bold tracking-[0.18em]">
-          WORKSPACE
-        </p>
-        <nav aria-label="주요 메뉴" className="flex-1">
-          <ul className="flex flex-col gap-1">
-            {NAV.map((item) => {
-              const active = isActive(pathname, item.href)
-              const Icon = item.icon
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn(
-                      'flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors',
-                      active
-                        ? 'bg-primary-soft text-primary font-semibold'
-                        : 'text-ink-muted hover:bg-surface-sunken hover:text-ink',
-                    )}
-                  >
-                    <Icon size={18} aria-hidden />
-                    {item.label}
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
-
-        <div className="border-border-base flex items-center gap-2 border-t px-1 pt-4">
-          <span
-            aria-hidden
-            className="bg-surface-sunken text-primary inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-          >
-            {initial}
-          </span>
-          <div className="min-w-0 flex-1">
-            <div className="text-ink truncate text-sm">{userName ?? '사용자'}</div>
-            <div className="text-ink-subtle truncate text-[0.625rem] whitespace-nowrap">매장 관리자</div>
-          </div>
-          {onSignOut}
-        </div>
-      </aside>
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-border-base bg-surface/70 flex h-14 shrink-0 items-center justify-between border-b px-8 backdrop-blur">
-          <p className="text-ink-muted flex items-center gap-2 text-xs">
-            <span>내 매장</span>
-            <span aria-hidden>/</span>
-            <span className="text-ink font-medium">{current?.label ?? '홈'}</span>
-          </p>
-          <TodayLabel />
-        </header>
-        <main className="mx-auto w-full max-w-[1500px] min-w-0 flex-1 px-8 py-7">
-          {children}
-        </main>
-      </div>
+      <main className="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-7 py-7">{children}</main>
     </div>
+  )
+}
+
+export function Brand({ storeName }: { storeName: string }) {
+  return (
+    <Link href="/" className="flex min-w-0 items-center gap-2.5">
+      {/* 로고 자리. 이미지가 없으니 가게 첫 글자. 검정 사각형이 상단 바의 닻이 된다. */}
+      <span
+        aria-hidden
+        className="bg-ink-strong text-ink-inverted inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm font-bold"
+      >
+        {storeName.trim().charAt(0) || 'Z'}
+      </span>
+      <span className="text-ink truncate text-sm font-bold">{storeName}</span>
+      <span className="text-ink-subtle hidden text-[0.625rem] tracking-[0.2em] sm:inline">
+        ZERO STORE
+      </span>
+    </Link>
+  )
+}
+
+/**
+ * 탭 내비. 모바일 셸도 같은 것을 쓴다 — 목업에서 위·아래 두 셸이 같은 탭을
+ * 쓰기로 했다(A2). 활성은 검정 밑줄, hover 는 6% 상태 레이어.
+ */
+export function TabNav({
+  pathname,
+  items = NAV,
+  compact = false,
+}: {
+  pathname: string
+  items?: typeof NAV
+  compact?: boolean
+}) {
+  return (
+    <nav aria-label="주요 메뉴" className="mx-auto w-full max-w-[1280px] overflow-x-auto px-4">
+      <ul className="flex gap-0.5">
+        {items.map((item) => {
+          const active = isActive(pathname, item.href)
+          const Icon = item.icon
+          return (
+            <li key={item.href} className="shrink-0">
+              <Link
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className={cn(
+                  'relative flex items-center gap-2 rounded-t-lg px-3 text-sm font-medium transition-colors',
+                  'hover:bg-ink/[0.06] active:bg-ink/[0.12]',
+                  compact ? 'h-10' : 'h-11',
+                  active ? 'text-ink-strong font-semibold' : 'text-ink-muted',
+                  // 밑줄. 색이 아니라 자리로 "여기" 를 말한다.
+                  'after:bg-ink-strong after:absolute after:inset-x-2 after:-bottom-px after:h-0.5 after:origin-center after:scale-x-0 after:transition-transform after:duration-200',
+                  active && 'after:scale-x-100',
+                )}
+              >
+                <Icon size={compact ? 16 : 18} aria-hidden />
+                {compact ? (item.tabLabel ?? item.label) : item.label}
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </nav>
   )
 }
 
 /**
  * 상단 바의 오늘 날짜. 서버가 아니라 브라우저 시계로 만든다 — 한 화면을 며칠씩
  * 켜 두는 매장 PC 에서 서버 렌더 시각이 굳어 있으면 어제 날짜가 남는다.
- * 서버와 브라우저의 날짜가 자정 근처에 어긋날 수 있어 하이드레이션 경고는 끈다.
  */
 function TodayLabel() {
   const label = new Date().toLocaleDateString('ko-KR', {
@@ -126,7 +132,7 @@ function TodayLabel() {
     weekday: 'long',
   })
   return (
-    <span className="text-ink-subtle text-xs" suppressHydrationWarning>
+    <span className="text-ink-subtle hidden text-xs md:inline" suppressHydrationWarning>
       {label}
     </span>
   )

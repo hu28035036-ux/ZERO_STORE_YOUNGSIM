@@ -84,6 +84,18 @@ POS 메뉴명을 상품명 바로 아래로·짧은 칸은 두 열·저장 버�
 `loadMoreStock` 액션이 같이 쓴다 — 정렬이 어긋나면 페이지 경계에서 중복되므로 쿼리는
 한 곳에만 둔다. `variant_id` 마지막 정렬키도 같은 이유). "삭제됨" 탭은 아직 200 상한.
 
+**2026-09-21 2차 리디자인: 블랙·화이트·코발트 + 상단 탭 셀 + Spoqa Han Sans Neo.** 사용자가
+레퍼런스 30개 중 A2(Vercel 상단 탭)·B7(Material 상태 레이어)·C6(Toss CTA)·C3(Geist 검정
+버튼)과 글꼴 5번(Spoqa)을 골랐다. 바뀜 것: `globals.css` 토큰(primary #0f4cff, 배경
+#f6f7f9, `--ink-strong`, `--primary-active`), `button.tsx` 에 `black` variant 와 상태 레이어
+(`STATE_LAYER`, after 가상요소로 hover 6%/pressed 12%), `size="lg"` 는 Toss CTA 꼴(rounded-2xl).
+사이드바를 없애고 데스크톱·모바일 모두 상단 탭(`TabNav`, 활성은 검정 밑줄). **모바일 하단 탭이
+사라졌으므로** sticky 합계 바의 모바일 오프셋이 `bottom-0` 으로 바뀌었다 — 하단 탭을 되돌리면
+`sale-lines-form.tsx` 의 STICKY.mobile 도 같이 되돌려야 한다. 글꼴은 `public/fonts/` 에
+자체 호스팅(400/500/700 서브셋 woff2, OFL 라이선스 파일 동봉) — Geist 는 mono 로만 남는다.
+페이지 머리글의 "새 화면으로 가는" 링크(상품 등록·파일로 입고·박스 만들기)는 `buttonClass('black')`,
+폼 제출(판매 확정·등록·저장)은 `primary`(코발트) — 화면에 파란 버튼은 "완료 동작" 하나만.
+
 배포·로그인·상품 수정 등 이전 이력은 git log 와 이 문서의 각 절에 있다.
 아직 안 한 것: 실제 바코드 스캐너 하드웨어 검증. (실제 사용자 .xlsx 임포트는
 2026-08-01 에 초도 파일로 확인됐다.) 자세한 건 "검증 상태" 절을 봐라.

@@ -68,7 +68,7 @@ export default async function HomePage() {
         title="오늘의 매장"
         description="재고와 판매 현황을 한눈에 확인하세요."
         actions={
-          <Link href="/stock" className={buttonClass('primary')}>
+          <Link href="/stock" className={buttonClass('black')}>
             재고 보기
           </Link>
         }

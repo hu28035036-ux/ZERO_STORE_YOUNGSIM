@@ -17,26 +17,32 @@
      매장에서 하루 종일 켜 두는 화면이라 순백 배경은 눈이 피로하고, 카드가
      배경과 구분되지 않아 표가 어디서 끝나는지 읽기 어려웠다. 채도는 거의
      없어야 한다 — 색이 있으면 재고 상태색(초록·주황·빨강)과 싸운다. */
+  /* 2026-09-21 2차: 블랙·화이트·코발트. 크림 배경을 버리고 무채색으로 간다 —
+     코발트 하나만 색이어야 "파란 것 = 주 동작" 이 한눈에 읽힌다. */
   --surface: #ffffff;        /* 카드, 시트 */
-  --surface-sunken: #f5f6f3; /* 페이지 배경. 카드가 떠 보이게 한 단 낮춘다 */
+  --surface-sunken: #f6f7f9; /* 페이지 배경. 카드가 떠 보이게 한 단 낮춘다 */
   --surface-raised: #ffffff;
-  --surface-nav: #fafbf8;    /* 사이드바. 카드보다 살짝 낮고 배경보다 살짝 높다 */
-  --border: #e5e9e3;
-  --border-strong: #d3d9d1;
+  --surface-nav: #ffffff;    /* 상단 바. 본문과 같은 흰색, 선으로만 구분 */
+  --border: #e6e8ec;
+  --border-strong: #d5d9e0;
 
   /* --- 글자 ------------------------------------------------------------- */
-  --ink: #1f2a26;            /* 본문. 배경이 크림이라 순검정보다 살짝 초록기 있는 먹색 */
-  --ink-muted: #75807a;      /* 보조 설명 */
-  --ink-subtle: #a0a9a3;     /* 비활성, 플레이스홀더 */
+  --ink: #111318;            /* 본문 */
+  --ink-strong: #0a0a0a;     /* 검정 버튼·활성 탭·검정 필터. 본문보다 한 단 더 검다 */
+  --ink-muted: #5c6370;      /* 보조 설명 */
+  --ink-subtle: #9aa1ad;     /* 비활성, 플레이스홀더 */
   --ink-inverted: #ffffff;
 
   /* --- 주 동작 ----------------------------------------------------------- */
   /* 파랑을 쓴다. 이 앱에서 빨강·초록·주황은 전부 재고 상태에 예약되어 있어서
      "저장" 같은 중립적 동작에 쓰면 뜻이 겹친다. */
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
+  /* 코발트. 목업(2026-09-21) 에서 확정한 값. hover 는 한 단계, active 는 두 단계
+     어둡게 — Carbon 의 "반 단계/한 단계" 규칙과 같은 생각이다. */
+  --primary: #0f4cff;
+  --primary-hover: #0b3fd8;
+  --primary-active: #0a34b3;
   --primary-ink: #ffffff;
-  --primary-soft: #eff6ff;
+  --primary-soft: #eaf0ff;
 
   /* --- 재고 상태 --------------------------------------------------------- */
   /* 색만으로 구분하지 않는다. 배지에는 항상 글자가 함께 들어간다.
@@ -56,7 +62,7 @@
   --profit: #15803d;         /* 마진 흑자 */
   --loss: #dc2626;           /* 마진 적자 — 원가가 판매가보다 높은 경우 */
 
-  --focus: #2563eb;
+  --focus: #0f4cff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -69,12 +75,14 @@
     --border-strong: #3f3f46;
 
     --ink: #fafafa;
+    --ink-strong: #ffffff;
     --ink-muted: #a1a1aa;
     --ink-subtle: #71717a;
     --ink-inverted: #18181b;
 
     --primary: #3b82f6;
     --primary-hover: #60a5fa;
+    --primary-active: #93c5fd;
     --primary-ink: #0a0a0a;
     --primary-soft: #172554;
 
@@ -108,12 +116,14 @@
   --color-border-strong: var(--border-strong);
 
   --color-ink: var(--ink);
+  --color-ink-strong: var(--ink-strong);
   --color-ink-muted: var(--ink-muted);
   --color-ink-subtle: var(--ink-subtle);
   --color-ink-inverted: var(--ink-inverted);
 
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
+  --color-primary-active: var(--primary-active);
   --color-primary-ink: var(--primary-ink);
   --color-primary-soft: var(--primary-soft);
 
@@ -138,16 +148,23 @@
 
   /* 카드 모서리. 목업 검토(2026-09-21)에서 확정한 값 — 더 둥글면 표 카드가
      장난감처럼 보이고, 덜 둥글면 크림 배경 위에서 딱딱해 보였다. */
-  --radius-card: 1rem;
+  --radius-card: 0.75rem;
 
   /* Geist 는 한글 글리프가 없다. 한글은 시스템 폰트로 떨어뜨린다.
      한글 웹폰트는 서브셋을 해도 수백 KB라, 계산대에서 매번 받게 할 이유가 없다.
      숫자와 영문만 Geist 가 그리고 한글은 기기 기본 글꼴이 그린다. */
-  --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
+  /* Spoqa Han Sans Neo(2026-09-21 확정). 한글·영문·숫자를 한 글꼴이 그린다 —
+     Geist 는 코드·바코드용 mono 로만 남긴다. 서브셋 woff2 3굵기 ≈ 540KB,
+     public/fonts 에 자체 호스팅(CDN 이 죽어도 화면이 바뀌지 않게). */
+  --font-sans: "Spoqa Han Sans Neo", -apple-system, BlinkMacSystemFont,
     "Apple SD Gothic Neo", "Pretendard", "Malgun Gothic", "맑은 고딕",
     system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
+
+@font-face{font-family:"Spoqa Han Sans Neo";font-weight:400;font-style:normal;font-display:swap;src:url("/fonts/SpoqaHanSansNeo-Regular.woff2") format("woff2")}
+@font-face{font-family:"Spoqa Han Sans Neo";font-weight:500;font-style:normal;font-display:swap;src:url("/fonts/SpoqaHanSansNeo-Medium.woff2") format("woff2")}
+@font-face{font-family:"Spoqa Han Sans Neo";font-weight:700;font-style:normal;font-display:swap;src:url("/fonts/SpoqaHanSansNeo-Bold.woff2") format("woff2")}
 
 @layer base {
   html {

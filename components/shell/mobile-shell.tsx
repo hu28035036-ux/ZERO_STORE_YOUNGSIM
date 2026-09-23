@@ -1,16 +1,18 @@
 'use client'
 
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-import { cn } from '@/lib/cn'
-import { isActive, TABS } from '@/lib/nav'
+import { TABS } from '@/lib/nav'
+
+import { Brand, TabNav } from './desktop-shell'
 
 /**
- * 휴대폰 셸: 상단 제목 + 하단 탭.
+ * 휴대폰 셸: 상단 제목 + 상단 탭 (2026-09-21 2차 리디자인, A2).
  *
- * 탭을 아래에 두는 이유는 단순하다. 계산대에서는 한 손으로 폰을 쥐고
- * 엄지로만 조작한다. 화면 위쪽은 엄지가 닿지 않는다.
+ * 하단 탭에서 상단 탭으로 옮겼다. 사용자가 목업에서 위·아래 셸이 같은 탭
+ * 모양을 쓰는 쪽을 골랐고, 판매 적기·박스 입고처럼 화면 아래에 큰 CTA 가
+ * 고정되는 화면에서 하단 탭과 CTA 가 겹쳐 손가락이 헷갈리는 문제도 사라진다.
+ * 대신 스크롤해도 탭이 따라오도록 헤더 전체를 sticky 로 둔다.
  */
 export function MobileShell({
   storeName,
@@ -25,62 +27,21 @@ export function MobileShell({
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="bg-surface/90 border-border-base sticky top-0 z-10 flex items-center justify-between gap-3 border-b px-4 py-3 backdrop-blur">
-        {/*
-          가게 이름은 제목이 아니라 상표다. h1 로 두면 각 화면이 이미 갖고 있는
-          제목과 h1 이 둘이 되고, 화면 제목("재고", "통계")이 문서의 최상위 제목
-          자리를 빼앗긴다 — 제목만 훑어 이동하는 사람에게는 모든 화면이 "영심
-          스토어"로 보인다. 데스크톱 셸도 같은 이유로 div 다.
-        */}
-        <p className="text-ink flex min-w-0 items-center gap-2 truncate text-base font-semibold">
-          <span
-            aria-hidden
-            className="bg-primary text-primary-ink inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm font-semibold"
-          >
-            {storeName.trim().charAt(0) || 'Z'}
-          </span>
-          <span className="truncate">{storeName}</span>
-        </p>
-        {signOut}
+      <header className="bg-surface/90 border-border-base sticky top-0 z-10 border-b backdrop-blur">
+        <div className="flex h-12 items-center justify-between gap-3 px-4">
+          {/*
+            가게 이름은 제목이 아니라 상표다. h1 로 두면 각 화면이 이미 갖고 있는
+            제목과 h1 이 둘이 되고, 화면 제목("재고", "통계")이 문서의 최상위 제목
+            자리를 빼앗긴다.
+          */}
+          <Brand storeName={storeName} />
+          {signOut}
+        </div>
+        <TabNav pathname={pathname} items={TABS} compact />
       </header>
 
-      {/* 하단 탭이 콘텐츠를 가리지 않도록 탭 높이 + 홈 인디케이터만큼 비운다. */}
-      <main className="flex-1 px-4 py-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
-        {children}
-      </main>
-
-      <nav
-        aria-label="주요 메뉴"
-        className={cn(
-          'bg-surface border-border-base fixed inset-x-0 bottom-0 z-20 border-t',
-          // 아이폰 홈 인디케이터 영역을 피한다. 없으면 맨 아래 탭이 눌리지 않는다.
-          'pb-[env(safe-area-inset-bottom)]',
-        )}
-      >
-        <ul className="flex">
-          {TABS.map((item) => {
-            const active = isActive(pathname, item.href)
-            const Icon = item.icon
-            return (
-              <li key={item.href} className="flex-1">
-                <Link
-                  href={item.href}
-                  aria-current={active ? 'page' : undefined}
-                  className={cn(
-                    'flex h-touch-lg flex-col items-center justify-center gap-0.5 transition-colors',
-                    active ? 'text-primary' : 'text-ink-subtle',
-                  )}
-                >
-                  <Icon size={20} aria-hidden />
-                  <span className="text-[0.6875rem] font-medium">
-                    {item.tabLabel ?? item.label}
-                  </span>
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
+      {/* 하단 탭이 없어졌으므로 아래 여백은 sticky CTA 가 있는 화면이 스스로 잡는다. */}
+      <main className="flex-1 px-4 py-4 pb-8">{children}</main>
     </div>
   )
 }

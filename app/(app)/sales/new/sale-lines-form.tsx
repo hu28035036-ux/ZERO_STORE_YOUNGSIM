@@ -35,11 +35,11 @@ function toInt(value: string): number {
 /**
  * 합계 막대가 앉을 위치.
  *
- * 휴대폰 셸은 하단 탭이 fixed 라 sticky bottom-0 을 그냥 두면 그 아래로 숨는다.
- * 어느 셸이 그려졌는지는 서버가 UA 로 정하므로 화면 폭(lg:)으로는 맞출 수 없다.
+ * 2026-09-21 2차 리디자인에서 휴대폰 하단 탭이 상단으로 올라가 둘 다 bottom-0 이다.
+ * 셸별 값을 남겨두는 이유: 하단 탭이 되돌아오면 mobile 만 다시 띄우면 되기 때문.
  */
 const STICKY: Record<Device, string> = {
-  mobile: 'bottom-[calc(4.5rem+env(safe-area-inset-bottom))]',
+  mobile: 'bottom-0',
   desktop: 'bottom-0',
 }
 

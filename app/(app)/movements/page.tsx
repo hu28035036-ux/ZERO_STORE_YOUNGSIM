@@ -100,7 +100,7 @@ export default async function MovementsPage({
               <ScrollText size={18} aria-hidden />
               기록
             </Link>
-            <Link href="/movements/import" className={buttonClass('primary')}>
+            <Link href="/movements/import" className={buttonClass('black')}>
               <FileUp size={18} aria-hidden />
               파일로 입고
             </Link>

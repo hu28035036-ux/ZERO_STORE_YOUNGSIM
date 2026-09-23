@@ -29,7 +29,7 @@ export function PeriodPicker({ period, days }: { period: Period; days: number })
               className={cn(
                 'inline-flex h-9 shrink-0 items-center rounded-lg px-3 text-sm font-medium transition-colors',
                 on
-                  ? 'bg-primary-soft text-primary font-semibold'
+                  ? 'bg-ink-strong text-ink-inverted font-semibold'
                   : 'text-ink-muted hover:bg-surface-sunken',
               )}
             >

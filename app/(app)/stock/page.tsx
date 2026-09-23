@@ -44,7 +44,7 @@ export default async function StockPage({
               <FileUp size={18} aria-hidden />
               파일로 등록
             </Link>
-            <Link href="/stock/new" className={buttonClass('primary')}>
+            <Link href="/stock/new" className={buttonClass('black')}>
               <Plus size={18} aria-hidden />
               상품 등록
             </Link>
