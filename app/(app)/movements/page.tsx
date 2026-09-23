@@ -4,10 +4,10 @@ import { Boxes, ChevronRight, FileUp, ScrollText, Search } from 'lucide-react'
 import { buttonClass } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
-import { likePattern, productSearchFilter } from '@/lib/search'
 import { createClient } from '@/lib/supabase/server'
 
 import { MovementForm, type SupplierOption, type VariantTarget } from './movement-form'
+import { fetchQuickPage } from './quick-fetch'
 import { QuickList } from './quick-list'
 import type { QuickTarget } from './quick-row'
 import { ScanSearchButton } from './scan-search-button'
@@ -22,7 +22,6 @@ export const metadata = { title: '입출고' }
  * 결정. nav 의 "입출고"를 누르면 바로 찾기 칸이 나온다.
  */
 
-const SEARCH_LIMIT = 20
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export default async function MovementsPage({
@@ -36,26 +35,19 @@ export default async function MovementsPage({
 
   const supabase = await createClient()
 
-  // 고른 변형이 있으면 그것만, 없으면 검색 결과를 받는다.
-  let lookup = supabase
-    .from('v_variant_stock')
-    .select('*')
-    .eq('is_active', true)
-    .eq('product_active', true)
-    .order('product_name')
-    .order('option_label', { nullsFirst: true })
-    .limit(SEARCH_LIMIT)
-
-  if (wanted) {
-    lookup = lookup.eq('variant_id', wanted)
-  } else {
-    const pattern = likePattern(q)
-    // 검색어가 없으면 최근에 손댄 것부터 몇 개 보여준다. 빈 화면보다 낫다.
-    if (pattern) lookup = lookup.or(productSearchFilter(pattern))
-  }
-
-  const [found, suppliers] = await Promise.all([
-    lookup,
+  // ?variant= 로 콕 집어 들어왔으면 그 한 건만 큰 폼으로 연다. 아니면 첫 30개를
+  // 받고 나머지는 QuickList 가 스크롤할 때 이어 받는다(quick-fetch.ts).
+  const [picked, firstPage, suppliers] = await Promise.all([
+    wanted
+      ? supabase
+          .from('v_variant_stock')
+          .select('*')
+          .eq('is_active', true)
+          .eq('product_active', true)
+          .eq('variant_id', wanted)
+          .maybeSingle()
+      : Promise.resolve(null),
+    wanted ? Promise.resolve(null) : fetchQuickPage(q, 0),
     supabase
       .from('suppliers')
       .select('id, name')
@@ -63,29 +55,17 @@ export default async function MovementsPage({
       .order('name'),
   ])
 
-  const rows = found.data ?? []
-
-  // 큰 폼은 ?variant= 로 콕 집어 들어왔을 때만 연다. 검색 결과의 줄 자체가
-  // 빠른 등록 폼이라, 한 건일 때도 목록에 남는 쪽이 손이 덜 간다.
-  const target = wanted ? rows[0] : null
+  const target = picked?.data ?? null
+  const targets: QuickTarget[] = firstPage?.rows ?? []
+  const total = firstPage?.total ?? 0
 
   // 스캔·검색이 한 건으로 떨어졌으면 그 줄 수량 칸이 포커스를 가진다. 이때는
   // 검색칸의 autoFocus 를 꺼야 한다 — 둘 다 걸면 검색칸이 이긴다(실제로 그랬다).
-  const single = rows.length === 1 && Boolean(q)
+  const single = targets.length === 1 && Boolean(q)
 
   const supplierOptions: SupplierOption[] = (suppliers.data ?? []).map((s) => ({
     id: s.id,
     name: s.name,
-  }))
-
-  const targets: QuickTarget[] = rows.map((row) => ({
-    variantId: row.variant_id!,
-    productName: row.product_name ?? '',
-    optionLabel: row.option_label,
-    stockQty: row.stock_qty ?? 0,
-    threshold: row.low_stock_threshold ?? 0,
-    salePrice: Number(row.sale_price ?? 0),
-    unit: row.unit || '개',
   }))
 
   return (
@@ -183,19 +163,14 @@ export default async function MovementsPage({
             </form>
           </Card>
 
-          {rows.length > 0 || q ? (
+          {targets.length > 0 || q ? (
             <p className="text-ink-subtle px-1 text-xs">
               줄에서 바로 수량을 넣어 등록하세요. 단가·거래처·박스·지난 날짜는
               “자세히”에서, 계속 볼 상품은 “고정”에 체크하세요.
             </p>
           ) : null}
 
-          <QuickList
-            rows={targets}
-            q={q}
-            hitLimit={rows.length === SEARCH_LIMIT}
-            searchLimit={SEARCH_LIMIT}
-          />
+          <QuickList key={q} initialRows={targets} total={total} q={q} />
         </>
       )}
     </div>

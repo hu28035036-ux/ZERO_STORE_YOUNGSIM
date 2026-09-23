@@ -1,9 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { formatQty } from '@/lib/constants'
+
+import { loadMoreQuick } from './actions'
 
 import { QuickRow, type QuickTarget } from './quick-row'
 
@@ -25,17 +29,67 @@ import { QuickRow, type QuickTarget } from './quick-row'
 
 const STORAGE_KEY = 'zerostore.quick-pins.v1'
 
+const PAGE_SIZE = 30
+
 export function QuickList({
-  rows,
+  initialRows,
+  total,
   q,
-  hitLimit,
-  searchLimit,
 }: {
-  rows: QuickTarget[]
+  initialRows: QuickTarget[]
+  total: number
   q: string
-  hitLimit: boolean
-  searchLimit: number
 }) {
+  // 무한 스크롤 누적분. 서버가 첫 페이지를 새로 주면(등록 후 router.refresh)
+  // 누적분을 버리고 다시 쌓는다 — 재고 화면(stock-infinite.tsx)과 같은 규칙.
+  const [rows, setRows] = useState<QuickTarget[]>(initialRows)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+  const sentinelRef = useRef<HTMLDivElement>(null)
+  const requestedRef = useRef<number>(initialRows.length)
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRows(initialRows)
+    requestedRef.current = initialRows.length
+    setLoadError(null)
+  }, [initialRows])
+
+  const hasMore = rows.length < total
+
+  function loadMore() {
+    const offset = rows.length
+    if (!hasMore || pending || requestedRef.current > offset) return
+    requestedRef.current = offset + PAGE_SIZE
+    startTransition(async () => {
+      const res = await loadMoreQuick({ q, offset })
+      if (res.error) {
+        setLoadError(res.error)
+        requestedRef.current = offset
+        return
+      }
+      setRows((prev) => {
+        const seen = new Set(prev.map((r) => r.variantId))
+        return [...prev, ...res.rows.filter((r) => !seen.has(r.variantId))]
+      })
+    })
+  }
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasMore) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) loadMore()
+      },
+      // 바닥 한 화면쯤 전에 미리 받아 스크롤이 멈추지 않게 한다.
+      { rootMargin: '600px 0px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, rows.length, pending])
+
   const [pins, setPins] = useState<QuickTarget[]>([])
   const [loaded, setLoaded] = useState(false)
 
@@ -154,10 +208,27 @@ export function QuickList({
         </section>
       ) : null}
 
-      {hitLimit ? (
-        <p className="text-ink-muted text-center text-sm">
-          {searchLimit}개까지만 보여주고 있습니다. 검색어를 더 좁혀 주세요.
-        </p>
+      {rows.length > 0 ? (
+        <>
+          <div ref={sentinelRef} aria-hidden className="h-px" />
+          <div className="flex flex-col items-center gap-2 py-1">
+            <p className="text-ink-subtle text-xs" data-numeric>
+              {formatQty(rows.length)} / {formatQty(total)}개
+            </p>
+            {loadError ? (
+              <p role="alert" className="text-danger text-sm">
+                {loadError}
+              </p>
+            ) : null}
+            {hasMore ? (
+              <Button variant="secondary" size="sm" onClick={loadMore} disabled={pending}>
+                {pending ? '불러오는 중…' : `다음 ${PAGE_SIZE}개 더 보기`}
+              </Button>
+            ) : rows.length > PAGE_SIZE ? (
+              <p className="text-ink-subtle text-xs">전체 목록을 다 보여드렸습니다.</p>
+            ) : null}
+          </div>
+        </>
       ) : null}
     </div>
   )

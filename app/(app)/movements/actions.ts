@@ -9,6 +9,8 @@ import { requireUser } from '@/lib/auth'
 import { todayInSeoul } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 
+import { fetchQuickPage } from './quick-fetch'
+
 export type MovementState = { error: string } | null
 
 const ENTRY_TYPE = z.enum(['purchase', 'outbound', 'adjustment', 'stocktake'])
@@ -248,4 +250,20 @@ export async function voidMovement(
   revalidatePath('/movements')
   revalidatePath('/stock')
   return null
+}
+
+// ---------------------------------------------------------------------------
+// 빠른 등록 목록 더 불러오기 (무한 스크롤). 조회 전용이라 revalidate 가 없다.
+// 검색어 길이 제한은 page.tsx 와 같다(40).
+// ---------------------------------------------------------------------------
+const loadMoreQuickSchema = z.object({
+  q: z.string().trim().max(40),
+  offset: z.number().int().min(0).max(100_000),
+})
+
+export async function loadMoreQuick(input: { q: string; offset: number }) {
+  await requireUser()
+  const parsed = loadMoreQuickSchema.safeParse(input)
+  if (!parsed.success) return { rows: [], total: 0, error: '잘못된 조회 조건입니다' }
+  return fetchQuickPage(parsed.data.q, parsed.data.offset)
 }
