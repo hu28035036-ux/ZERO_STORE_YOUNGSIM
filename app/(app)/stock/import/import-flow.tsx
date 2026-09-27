@@ -385,7 +385,8 @@ function ColumnPicker({
       <SamplePreview headers={headers} rows={rows} map={map} />
 
       <div className="flex gap-2">
-        <Button variant="secondary" onClick={onBack}>
+        {/* shrink-0 을 빼면 옆의 full 버튼이 이 버튼을 글자보다 좁게 눌러 "다른 / 파일"로 쪼갠다 */}
+        <Button variant="secondary" className="shrink-0" onClick={onBack}>
           다른 파일
         </Button>
         <Button full disabled={!usable || usedTwice.size > 0} onClick={() => onDone(map)}>

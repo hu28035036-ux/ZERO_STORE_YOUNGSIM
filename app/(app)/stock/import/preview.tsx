@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input, NumberInput, Select } from '@/components/ui/field'
+import { cn } from '@/lib/cn'
 import { formatQty, formatWon } from '@/lib/constants'
 import type { CategoryOption } from '../categories'
 
@@ -307,6 +308,42 @@ export function ProductImportPreview({
   const s = summary!
   const canConfirm = s.included.length > 0 && s.emptyName.length === 0 && !saving
 
+  // 표와 휴대폰 카드가 같은 입력칸·버튼을 쓴다 — 두 벌로 두면 한쪽만 고쳐지는 날이 온다.
+  const listed = rows.filter((r) => isIncluded(r) || r.status.kind === 'skipped')
+  const nameInput = (r: Row, skipped: boolean, className?: string) => (
+    <Input
+      aria-label={`${r.no}줄 제품명`}
+      value={r.name}
+      disabled={skipped}
+      onChange={(e) => patchRow(r.no, { name: e.target.value })}
+      maxLength={120}
+      className={className}
+    />
+  )
+  const qtyInput = (r: Row, skipped: boolean) => (
+    <NumberInput
+      aria-label={`${r.no}줄 초도수량`}
+      value={String(r.qty)}
+      disabled={skipped}
+      onChange={(e) => {
+        const n = Number(e.target.value.replace(/[^\d]/g, ''))
+        patchRow(r.no, { qty: Number.isFinite(n) ? n : 0 })
+      }}
+      className="w-20 text-right"
+    />
+  )
+  const skipButton = (r: Row, skipped: boolean) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() =>
+        patchRow(r.no, { status: skipped ? { kind: 'ok' } : { kind: 'skipped' } })
+      }
+    >
+      {skipped ? '되살리기' : '빼기'}
+    </Button>
+  )
+
   return (
     <div className="flex flex-col gap-4">
       {remembered ? (
@@ -461,12 +498,49 @@ export function ProductImportPreview({
         </Card>
       ) : null}
 
-      {/* 등록될 상품 표 — 이름·수량은 여기서 바로 고칠 수 있다 */}
+      {/* 등록될 상품 — 이름·수량은 여기서 바로 고칠 수 있다.
+          휴대폰(sm 아래)은 줄마다 카드다. 표는 최소폭이 832px 라 휴대폰에서는 번호·제품명·
+          분류만 보이고 원가·판매가·초도수량은 옆으로 밀어야 나왔다. 이름 칸이 입력칸이라
+          "이름 칸만 붙박이로 두고 나머지를 민다"도 휴대폰에서는 남는 자리가 없다. */}
       <Card>
         <CardHeader>
           <CardTitle>등록될 상품 {s.included.length}개</CardTitle>
         </CardHeader>
-        <CardBody className="overflow-x-auto">
+        <ul className="divide-border-base divide-y sm:hidden">
+          {listed.map((r) => {
+            const skipped = r.status.kind === 'skipped'
+            return (
+              <li key={r.no} className={cn('flex flex-col gap-2 px-5 py-4', skipped && 'opacity-45')}>
+                <div className="flex items-center gap-2">
+                  <span className="text-ink-subtle w-6 shrink-0 text-xs" data-numeric>
+                    {r.no}
+                  </span>
+                  <div className="min-w-0 flex-1">{nameInput(r, skipped)}</div>
+                </div>
+                {r.spec ? <p className="text-ink-subtle text-xs">{r.spec}</p> : null}
+                <p className="text-ink-muted text-xs">
+                  {[r.categoryName ?? '분류 없음', r.channel, r.code].filter(Boolean).join(' · ')}
+                </p>
+                <p className="text-ink flex flex-wrap gap-x-3 gap-y-1 text-sm" data-numeric>
+                  <span>원가 {formatWon(r.cost)}</span>
+                  <span>
+                    판매가{' '}
+                    {r.price > 0 ? formatWon(r.price) : <span className="text-low">미정</span>}
+                  </span>
+                  {r.pack != null ? <span>박스당 {formatQty(r.pack)}</span> : null}
+                </p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-ink-muted text-sm">초도수량</span>
+                    {qtyInput(r, skipped)}
+                  </div>
+                  {skipButton(r, skipped)}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+        <CardBody className="hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[52rem] text-sm">
             <thead>
               <tr className="text-ink-muted border-border-base border-b text-left text-xs">
@@ -483,79 +557,47 @@ export function ProductImportPreview({
               </tr>
             </thead>
             <tbody>
-              {rows
-                .filter((r) => isIncluded(r) || r.status.kind === 'skipped')
-                .map((r) => {
-                  const skipped = r.status.kind === 'skipped'
-                  return (
-                    <tr
-                      key={r.no}
-                      className={`border-border-base border-b last:border-0 ${skipped ? 'opacity-45' : ''}`}
-                    >
-                      <td className="text-ink-subtle py-1.5 pr-3" data-numeric>
-                        {r.no}
-                      </td>
-                      <td className="py-1.5 pr-3">
-                        <Input
-                          aria-label={`${r.no}줄 제품명`}
-                          value={r.name}
-                          disabled={skipped}
-                          onChange={(e) => patchRow(r.no, { name: e.target.value })}
-                          maxLength={120}
-                          className="min-w-56"
-                        />
-                        {r.spec ? (
-                          <span className="text-ink-subtle mt-0.5 block truncate text-xs">
-                            {r.spec}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="text-ink-muted py-1.5 pr-3 whitespace-nowrap">
-                        {r.categoryName ?? '—'}
-                      </td>
-                      <td className="text-ink-muted py-1.5 pr-3 whitespace-nowrap">
-                        {r.channel ?? '—'}
-                      </td>
-                      <td className="text-ink-muted py-1.5 pr-3 whitespace-nowrap" data-numeric>
-                        {r.code ?? '—'}
-                      </td>
-                      <td className="text-ink py-1.5 pr-3 text-right" data-numeric>
-                        {r.pack != null ? formatQty(r.pack) : '—'}
-                      </td>
-                      <td className="text-ink py-1.5 pr-3 text-right" data-numeric>
-                        {formatWon(r.cost)}
-                      </td>
-                      <td className="text-ink py-1.5 pr-3 text-right" data-numeric>
-                        {r.price > 0 ? formatWon(r.price) : <span className="text-low">미정</span>}
-                      </td>
-                      <td className="py-1.5 pr-3 text-right">
-                        <NumberInput
-                          aria-label={`${r.no}줄 초도수량`}
-                          value={String(r.qty)}
-                          disabled={skipped}
-                          onChange={(e) => {
-                            const n = Number(e.target.value.replace(/[^\d]/g, ''))
-                            patchRow(r.no, { qty: Number.isFinite(n) ? n : 0 })
-                          }}
-                          className="w-20 text-right"
-                        />
-                      </td>
-                      <td className="py-1.5 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            patchRow(r.no, {
-                              status: skipped ? { kind: 'ok' } : { kind: 'skipped' },
-                            })
-                          }
-                        >
-                          {skipped ? '되살리기' : '빼기'}
-                        </Button>
-                      </td>
-                    </tr>
-                  )
-                })}
+              {listed.map((r) => {
+                const skipped = r.status.kind === 'skipped'
+                return (
+                  <tr
+                    key={r.no}
+                    className={`border-border-base border-b last:border-0 ${skipped ? 'opacity-45' : ''}`}
+                  >
+                    <td className="text-ink-subtle py-1.5 pr-3" data-numeric>
+                      {r.no}
+                    </td>
+                    <td className="py-1.5 pr-3">
+                      {nameInput(r, skipped, 'min-w-56')}
+                      {r.spec ? (
+                        <span className="text-ink-subtle mt-0.5 block truncate text-xs">
+                          {r.spec}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="text-ink-muted py-1.5 pr-3 whitespace-nowrap">
+                      {r.categoryName ?? '—'}
+                    </td>
+                    <td className="text-ink-muted py-1.5 pr-3 whitespace-nowrap">
+                      {r.channel ?? '—'}
+                    </td>
+                    <td className="text-ink-muted py-1.5 pr-3 whitespace-nowrap" data-numeric>
+                      {r.code ?? '—'}
+                    </td>
+                    <td className="text-ink py-1.5 pr-3 text-right" data-numeric>
+                      {r.pack != null ? formatQty(r.pack) : '—'}
+                    </td>
+                    <td className="text-ink py-1.5 pr-3 text-right" data-numeric>
+                      {formatWon(r.cost)}
+                    </td>
+                    <td className="text-ink py-1.5 pr-3 text-right" data-numeric>
+                      {r.price > 0 ? formatWon(r.price) : <span className="text-low">미정</span>}
+                    </td>
+                    <td className="py-1.5 pr-3 text-right">{qtyInput(r, skipped)}</td>
+                    <td className="py-1.5 text-right">{skipButton(r, skipped)}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </CardBody>
@@ -575,7 +617,8 @@ export function ProductImportPreview({
       ) : null}
 
       <div className="flex gap-2">
-        <Button variant="secondary" onClick={onRestart} disabled={saving}>
+        {/* shrink-0 을 빼면 옆의 full 버튼이 이 버튼을 글자보다 좁게 눌러 "다른 / 파일"로 쪼갠다 */}
+        <Button variant="secondary" className="shrink-0" onClick={onRestart} disabled={saving}>
           다른 파일
         </Button>
         <Button full disabled={!canConfirm} onClick={() => void confirm()}>

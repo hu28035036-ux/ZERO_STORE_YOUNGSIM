@@ -102,7 +102,7 @@ export default async function StockPage({
       .limit(LIST_LIMIT)
     if (pattern) archivedList = archivedList.ilike('product_name', pattern)
 
-    const archivedResult = await archivedList
+    const [device, archivedResult] = await Promise.all([getDevice(), archivedList])
     const archivedRows = (archivedResult.data ?? []) as ArchivedProduct[]
 
     return (
@@ -123,7 +123,7 @@ export default async function StockPage({
             </p>
           </Card>
         ) : (
-          <ArchivedTable rows={archivedRows} />
+          <ArchivedTable rows={archivedRows} device={device === 'mobile' ? 'mobile' : 'desktop'} />
         )}
       </div>
     )

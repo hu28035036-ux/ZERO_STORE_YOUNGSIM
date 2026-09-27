@@ -328,21 +328,26 @@ export function ProductForm({
               return (
                 <div key={axis.id} className="flex flex-col gap-2">
                   <div className="flex items-end gap-2">
-                    <Input
-                      label={`옵션 ${i + 1}`}
-                      value={axis.name}
-                      onChange={(e) =>
-                        setAxes((prev) =>
-                          prev.map((a) =>
-                            a.id === axis.id ? { ...a, name: e.target.value } : a,
-                          ),
-                        )
-                      }
-                      placeholder="색상"
-                      maxLength={20}
-                      className="sm:w-40"
-                    />
-                    <div className="flex-1">
+                    {/* 이름 칸의 폭은 감싼 칸에 못 박는다. 입력칸에만 주면(sm:w-40) 감싼 칸이
+                        입력칸의 기본 폭(약 190px)을 그대로 가져가서, 360px 휴대폰에서 옆의
+                        값 칸이 26px 로 눌려 친 글자가 안 보였다. 폰 80px 는 "사이즈" 세 글자가
+                        들어가면서 값 칸 예시("검정, 흰색, 회색")가 360px 에서 다 보이는 폭이다. */}
+                    <div className="w-20 shrink-0 sm:w-40">
+                      <Input
+                        label={`옵션 ${i + 1}`}
+                        value={axis.name}
+                        onChange={(e) =>
+                          setAxes((prev) =>
+                            prev.map((a) =>
+                              a.id === axis.id ? { ...a, name: e.target.value } : a,
+                            ),
+                          )
+                        }
+                        placeholder="색상"
+                        maxLength={20}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
                       <Input
                         label="값 (쉼표로 구분)"
                         value={axis.raw}

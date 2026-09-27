@@ -49,7 +49,9 @@ export function StockToolbar({ query }: { query: StockQuery }) {
               type="search"
               name="q"
               defaultValue={query.q}
-              placeholder="상품명 · SKU · 바코드"
+              // 360px 휴대폰에서 글자가 들어갈 자리가 약 110px 다. 더 길면 말줄임 없이
+              // 뚝 잘려 "· 바코드"가 안 보였다(SKU 는 화면에서 안 쓰는 값이라 뺐다 — 검색은 그대로 훑는다).
+              placeholder="상품명·바코드"
               aria-label="재고 검색"
               autoCapitalize="none"
               autoComplete="off"
