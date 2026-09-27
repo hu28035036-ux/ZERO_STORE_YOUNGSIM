@@ -7,6 +7,17 @@ import { cn } from '@/lib/cn'
 import type { ActionState } from '@/lib/action-state'
 
 /**
+ * 확인 단계 버튼은 높이를 풀고 이 최소 높이만 지킨다. 확인 문구가 길어서("정말 되돌리기 — 재고와
+ * 매출이 반영 전으로 돌아갑니다") 휴대폰에서 두 줄이 되는데, 공용 버튼은 높이 고정에 넘친 글자를
+ * 숨겨 위아래가 잘렸다.
+ */
+const CONFIRM_MIN_H: Record<NonNullable<ButtonProps['size']>, string> = {
+  sm: 'min-h-9',
+  md: 'min-h-touch',
+  lg: 'min-h-touch-lg',
+}
+
+/**
  * 서버 액션 하나를 감싸는 폼.
  *
  * 설정 화면에는 작은 폼이 여러 개 있고 전부 같은 것을 필요로 한다 —
@@ -87,11 +98,20 @@ export function ActionForm({
               size={submitSize}
               full={full && !confirmLabel}
               disabled={pending}
+              className={
+                confirmLabel ? cn('h-auto py-1.5', CONFIRM_MIN_H[submitSize ?? 'md']) : undefined
+              }
             >
               {pending ? '처리 중…' : (confirmLabel ?? submitLabel)}
             </Button>
             {confirmLabel && armed ? (
-              <Button size={submitSize} variant="ghost" onClick={() => setArmed(false)}>
+              // shrink-0·nowrap: 긴 확인 버튼이 폭을 가져가 "취/소"로 눌려 꺾였다.
+              <Button
+                size={submitSize}
+                variant="ghost"
+                className="shrink-0 whitespace-nowrap"
+                onClick={() => setArmed(false)}
+              >
                 취소
               </Button>
             ) : null}
