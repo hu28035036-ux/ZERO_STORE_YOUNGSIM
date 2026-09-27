@@ -119,7 +119,11 @@ export const config = {
      * 주의: 서버 액션은 별도 경로가 아니라 그 액션이 놓인 라우트로 가는 POST 다.
      * 즉 여기서 제외한 경로는 서버 액션 호출도 함께 빠진다. proxy 를 최종
      * 방어선으로 삼지 말고 액션 안에서 반드시 다시 확인할 것 (lib/auth.ts).
+     *
+     * 글꼴(woff2 등)도 빼야 한다. 빠져 있으면 로그인 전 요청이 /login 으로 돌려보내져
+     * 로그인 화면만 자체 호스팅 글꼴(public/fonts) 대신 기본 글꼴로 그려진다
+     * (2026-09-27 발견 — 로그인한 뒤에는 통과해서 티가 안 났다).
      */
-    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|wasm)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|wasm|woff2|woff|ttf|otf)$).*)',
   ],
 }
