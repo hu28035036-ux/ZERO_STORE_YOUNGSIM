@@ -23,6 +23,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { formatQty, formatWon, todayInSeoul } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 
+import { SiteLinks } from './site-links'
 import { addDays, presetRange } from './stats/period'
 import { TopSellersCard } from './top-sellers-card'
 
@@ -152,6 +153,8 @@ export default async function HomePage() {
           </p>
         </Card>
       ) : null}
+
+      <SiteLinks />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]">
         <TopSellersCard
