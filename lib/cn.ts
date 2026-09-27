@@ -1,5 +1,23 @@
 import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { extendTailwindMerge } from 'tailwind-merge'
+
+/**
+ * twMerge 에 이 앱이 만든 이름을 알려 준다 (app/globals.css 의 @theme).
+ *
+ * 기본 설정은 spacing 을 숫자로만, radius 를 정해진 크기 이름으로만 알아본다. 그래서
+ * `h-touch` 를 높이로 못 알아보고 `cn('h-touch', 'h-12')` 에서 둘 다 남겨, CSS 선언
+ * 순서가 이기는 쪽을 정했다 — 호출부가 준 높이가 조용히 무시돼 입출고 카메라 버튼과
+ * 빠른 등록 수량 칸이 옆 버튼과 4px 어긋났다(2026-09-27). @theme 에 이름을 더하면
+ * 여기에도 더해라.
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      spacing: ['touch', 'touch-lg'],
+      radius: ['card'],
+    },
+  },
+})
 
 /**
  * 클래스 합치기.
