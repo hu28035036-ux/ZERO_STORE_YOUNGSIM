@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 
 import { Badge } from '@/components/ui/badge'
@@ -342,11 +342,25 @@ export function ImportPreview({
               · 건너뜀 <b data-numeric>{s.skipped.length}</b>
             </>
           ) : null}
-          {' '}· 영수증 <b data-numeric>{s.dates.length}</b>장
+          {/* 날짜·"영수증 N장"·"합계 N원"은 한 덩어리 안에서 꺾지 않는다. 휴대폰에서 날짜가
+              하이픈에서 "(2026- / 09-27)"로, "합계 / 0원"처럼 갈라졌다. 덩어리 사이에서는 꺾인다. */}
+          {' '}· <span className="whitespace-nowrap">영수증 <b data-numeric>{s.dates.length}</b>장</span>
           {s.dates.length > 0 ? (
-            <span className="text-ink-muted"> ({s.dates.join(', ')})</span>
+            <span className="text-ink-muted">
+              {' '}
+              (
+              {s.dates.map((d, i) => (
+                <Fragment key={d}>
+                  {i > 0 ? ', ' : ''}
+                  <span className="whitespace-nowrap" data-numeric>
+                    {d}
+                  </span>
+                </Fragment>
+              ))}
+              )
+            </span>
           ) : null}
-          {' '}· 합계 <b data-numeric>{formatWon(s.revenue)}</b>
+          {' '}· <span className="whitespace-nowrap">합계 <b data-numeric>{formatWon(s.revenue)}</b></span>
         </p>
       </Card>
 
@@ -617,12 +631,22 @@ function UnresolvedList({
                 {l.qty != null ? (
                   <span className="text-ink-muted" data-numeric>
                     {' '}
-                    · {formatQty(l.qty)}
-                    {lineUnit(l)}
+                    · <span className="whitespace-nowrap">
+                      {formatQty(l.qty)}
+                      {lineUnit(l)}
+                    </span>
                   </span>
                 ) : null}
               </p>
-              <Button variant="ghost" size="sm" onClick={() => onSkip(l.no)}>
+              {/* shrink-0·nowrap: 상품명이 길면 이 버튼이 68px 까지 눌려 글자가 세 줄로 꺾였고,
+                  공용 버튼은 높이 고정에 넘친 글자를 숨겨서 "건너뛰" 정도만 보였다. 줄어드는 쪽은
+                  줄을 바꿀 수 있는 상품명이어야 한다. */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 whitespace-nowrap"
+                onClick={() => onSkip(l.no)}
+              >
                 이 줄 건너뛰기
               </Button>
             </div>
@@ -647,8 +671,11 @@ function UnresolvedList({
                           onClick={() => onPick(l.no, c)}
                           className="border-border-strong hover:bg-surface-sunken flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left"
                         >
+                          {/* 후보 이름은 한 줄로 자르지 않는다. 비슷한 후보는 뒤에 붙은 맛·종류만
+                              달라서("다신샵 곤약현미떡마리 떡볶이맛/통모짜/콘치즈"), 자르면 360px 에서
+                              셋이 똑같이 보였다 — 잘못 고르면 다른 상품의 재고가 깎인다. */}
                           <span className="min-w-0">
-                            <span className="text-ink block truncate text-sm">
+                            <span className="text-ink block text-sm">
                               {c.productName}
                               {c.optionLabel ? (
                                 <span className="text-ink-muted"> · {c.optionLabel}</span>

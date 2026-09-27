@@ -183,7 +183,9 @@ export function SaleLinesForm({ device }: { device: Device }) {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="바코드를 찍거나 상품명을 치세요"
+              // 휴대폰 칸 폭(360px 에서 글자 자리 약 158px)에 맞춘 길이다. 길면 "…상품명"에서
+              // 말줄임 없이 잘렸다.
+              placeholder="바코드 또는 상품명"
               aria-label="바코드 또는 상품명"
               autoFocus
               autoCapitalize="none"

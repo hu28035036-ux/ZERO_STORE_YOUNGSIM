@@ -90,7 +90,8 @@ export default async function BatchesPage() {
                 <p className="text-ink-muted text-sm">
                   영수증 {list.length}장 ({dates.join(', ')}) ·{' '}
                   <span data-numeric>{formatQty(lines)}줄</span> ·{' '}
-                  <span className="text-ink font-medium" data-numeric>
+                  {/* nowrap: 7자리 금액이 360px 에서 "2,252,070 / 원"으로 단위만 떨어졌다. */}
+                  <span className="text-ink font-medium whitespace-nowrap" data-numeric>
                     {formatWon(revenue)}
                   </span>
                   {list[0].memo ? (

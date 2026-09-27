@@ -112,9 +112,9 @@ export default async function SaleOrderPage({
                 className="flex items-baseline justify-between gap-3 px-5 py-4"
               >
                 <div className="min-w-0">
-                  <p className="text-ink truncate text-sm font-medium">
-                    {l.product_name}
-                  </p>
+                  {/* 한 줄로 자르지 않는다. 긴 이름 끝의 맛·용량이 말줄임 뒤로 숨는데 펼쳐 볼
+                      방법도 없었다(360px 에서 74줄 중 14줄). */}
+                  <p className="text-ink text-sm font-medium">{l.product_name}</p>
                   <p className="text-ink-muted text-xs" data-numeric>
                     {l.option_label ? `${l.option_label} · ` : ''}
                     {formatQty(-(l.qty_delta ?? 0))}

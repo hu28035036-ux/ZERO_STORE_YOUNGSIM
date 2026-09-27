@@ -140,15 +140,17 @@ export default async function SalesPage() {
                       {mm}/{dd}
                     </span>
                     <Badge tone="neutral">{o.source === 'import' ? '파일' : '직접'}</Badge>
+                    {/* 제목은 두 줄까지 보인다. 한 줄로 자르면 360px 휴대폰에서 날짜·배지·금액이
+                        자리를 먼저 가져가 제목 칸이 80px 로 줄고, "9/26(토) …"처럼 왼쪽과 같은
+                        날짜만 남았다. "되돌림"은 잘리는 제목 안이 아니라 아랫줄에 둔다 —
+                        제목 끝에 붙어 있으면 말줄임 뒤로 숨는다. */}
                     <div className="min-w-0 flex-1">
-                      <p className="text-ink truncate text-sm font-medium">
-                        {o.memo || '판매'}
-                        {o.item_count === 0 ? (
-                          <span className="text-ink-subtle ml-2 text-xs">되돌림</span>
-                        ) : null}
-                      </p>
+                      <p className="text-ink line-clamp-2 text-sm font-medium">{o.memo || '판매'}</p>
                       <p className="text-ink-muted text-xs" data-numeric>
                         {formatDateTime(o.occurred_at).split(' ').slice(-1)[0]} · {formatQty(o.item_count)}점
+                        {o.item_count === 0 ? (
+                          <span className="text-ink-subtle"> · 되돌림</span>
+                        ) : null}
                       </p>
                     </div>
                     <span className="text-ink shrink-0 text-sm font-semibold" data-numeric>
