@@ -50,9 +50,12 @@ function toInt(value: string): number {
 export function MovementForm({
   target,
   suppliers,
+  defaultDate,
 }: {
   target: VariantTarget
   suppliers: SupplierOption[]
+  /** 빠른 등록에서 지난 날짜를 골라 둔 채 "자세히"로 들어오면 그 날짜. */
+  defaultDate?: string
 }) {
   const [state, formAction, pending] = useActionState<MovementState, FormData>(
     recordMovement,
@@ -330,7 +333,7 @@ export function MovementForm({
               label="발생일"
               name="date"
               type="date"
-              defaultValue={today}
+              defaultValue={defaultDate ?? today}
               max={today}
               hint="어제 들어온 물건을 오늘 넣을 때 바꾸세요."
             />

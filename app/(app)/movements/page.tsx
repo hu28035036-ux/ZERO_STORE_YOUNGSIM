@@ -4,8 +4,10 @@ import { Boxes, ChevronRight, FileUp, ScrollText, Search } from 'lucide-react'
 import { buttonClass } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
+import { todayInSeoul } from '@/lib/constants'
 import { createClient } from '@/lib/supabase/server'
 
+import { parseEntryDate } from './entry-date'
 import { MovementForm, type SupplierOption, type VariantTarget } from './movement-form'
 import { fetchQuickPage } from './quick-fetch'
 import { QuickList } from './quick-list'
@@ -32,6 +34,9 @@ export default async function MovementsPage({
   const sp = await searchParams
   const q = (typeof sp.q === 'string' ? sp.q : '').trim().slice(0, 40)
   const wanted = typeof sp.variant === 'string' && UUID.test(sp.variant) ? sp.variant : null
+  const today = todayInSeoul()
+  // 줄의 달력에서 지난 날짜를 골라 둔 채 "자세히"로 들어오면 큰 폼의 발생일이 그 날이다.
+  const date = parseEntryDate(sp.date, today)
 
   const supabase = await createClient()
 
@@ -103,6 +108,7 @@ export default async function MovementsPage({
             } satisfies VariantTarget
           }
           suppliers={supplierOptions}
+          defaultDate={date < today ? date : undefined}
         />
       ) : (
         <>
@@ -165,12 +171,12 @@ export default async function MovementsPage({
 
           {targets.length > 0 || q ? (
             <p className="text-ink-subtle px-1 text-xs">
-              줄에서 바로 수량을 넣어 등록하세요. 단가·거래처·박스·지난 날짜는
-              “자세히”에서, 계속 볼 상품은 “고정”에 체크하세요.
+              줄에서 바로 수량을 넣어 등록하세요. 지난 날짜는 줄의 달력에서 고르고,
+              단가·거래처·박스는 “자세히”에서 넣습니다.
             </p>
           ) : null}
 
-          <QuickList key={q} initialRows={targets} total={total} q={q} />
+          <QuickList key={q} initialRows={targets} total={total} q={q} today={today} />
         </>
       )}
     </div>

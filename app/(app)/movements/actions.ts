@@ -58,11 +58,13 @@ function humanize(error: PostgrestError): string {
  *
  * 등록 화면의 큰 폼(recordMovement)과 검색 결과 줄의 빠른 등록(quickMovement)이
  * 같은 검증·환산·RPC 를 타야 한다. 두 벌로 두면 박스 환산 같은 규칙이 한쪽만
- * 고쳐지는 날이 온다. 성공하면 처리 후 잔여 재고를 돌려준다.
+ * 고쳐지는 날이 온다. 성공하면 처리 후 잔여 재고와, 지난 날짜로 들어갔으면 그
+ * 날짜(occurredOn)를 돌려준다 — 실사처럼 날짜를 받아도 오늘로 남는 경우가 있어서
+ * 화면이 고른 날짜를 그대로 믿고 "그 날로 반영됐다"고 말하면 틀린다.
  */
 async function applyMovement(
   formData: FormData,
-): Promise<{ error: string } | { after: number }> {
+): Promise<{ error: string } | { after: number; occurredOn: string | null }> {
   await requireUser()
 
   const parsed = schema.safeParse({
@@ -164,7 +166,7 @@ async function applyMovement(
       p_note: note ?? undefined,
     })
     if (error) return { error: humanize(error) }
-    return { after: data ?? qty }
+    return { after: data ?? qty, occurredOn: null }
   }
 
   // 오늘이면 now() 그대로 두어 시각까지 남긴다. 지난 날짜면 그 날 정오로
@@ -186,7 +188,7 @@ async function applyMovement(
     p_occurred_at: occurredAt,
   })
   if (error) return { error: humanize(error) }
-  return { after: data ?? 0 }
+  return { after: data ?? 0, occurredOn: occurredAt ? date : null }
 }
 
 export async function recordMovement(
@@ -204,7 +206,10 @@ export async function recordMovement(
   redirect('/movements/history')
 }
 
-export type QuickState = { error: string } | { ok: true; after: number } | null
+export type QuickState =
+  | { error: string }
+  | { ok: true; after: number; date: string | null }
+  | null
 
 /**
  * 검색 결과 줄에서 바로 등록. 화면을 떠나지 않으므로 redirect 가 없고,
@@ -223,7 +228,7 @@ export async function quickMovement(
   // 한 번 더 누르게 되는 종류의 사고다 (실제로 E2E 가 비결정적으로 재현했다).
   // 갱신은 성공을 받은 줄이 router.refresh() 로 한다. 다른 화면(홈·재고·통계)은
   // 동적 렌더라 다음 방문 때 어차피 새로 그려진다.
-  return { ok: true, after: result.after }
+  return { ok: true, after: result.after, date: result.occurredOn }
 }
 
 export async function voidMovement(
