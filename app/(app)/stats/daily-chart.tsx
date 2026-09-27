@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/cn'
 import { formatWon, TIME_ZONE } from '@/lib/constants'
 
+import { labelIndices, labelStep } from './chart-labels'
 import { addDays, eachDay } from './period'
 
 export type DailyPoint = { date: string; revenue: number }
@@ -13,6 +14,12 @@ export type DailyPoint = { date: string; revenue: number }
 const GRAINS = ['day', 'week', 'month'] as const
 type Grain = (typeof GRAINS)[number]
 const GRAIN_LABEL: Record<Grain, string> = { day: '일별', week: '주간', month: '월간' }
+
+/**
+ * 막대 밑 날짜 한 개의 폭(px, text-xs). 잰 값에 사이 여백을 조금 더했다 — "9. 16." 30,
+ * "10. 13.~" 약 40, "2025. 10." 44~51. 날짜 표기(DAY_LABEL 등)를 바꾸면 여기도 다시 재라.
+ */
+const LABEL_PX: Record<Grain, number> = { day: 34, week: 44, month: 56 }
 
 const DAY_LABEL = new Intl.DateTimeFormat('ko-KR', {
   timeZone: TIME_ZONE,
@@ -104,6 +111,24 @@ export function DailyChart({
   const few = buckets.length <= 12
   const col = cn('flex min-w-0 flex-1 flex-col', few && 'max-w-24')
 
+  // 막대 칸이 날짜 글자보다 좁으면(휴대폰) 몇 칸마다 적을지를 칸 폭으로 정한다(chart-labels.ts).
+  // 적는 라벨은 제 칸 밖으로 넘쳐도 되게 한다 — 사이 칸 라벨은 비워서 겹치지 않고, 빈 칸도
+  // 자리는 지켜 막대와 줄이 맞는다. 폭을 재기 전(첫 렌더)에는 전부 적고 칸 안에서 자른다.
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const [bodyWidth, setBodyWidth] = useState(0)
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+    const observer = new ResizeObserver(([entry]) => setBodyWidth(entry.contentRect.width))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  const n = buckets.length
+  // 칸 사이 간격 2px(gap-[2px]), 칸 최대 폭 96px(max-w-24)
+  const columnPx = bodyWidth > 0 ? Math.min(96, (bodyWidth - 2 * (n - 1)) / n) : 0
+  const step = labelStep(LABEL_PX[grain], columnPx)
+  const shown = labelIndices(n, step)
+
   return (
     <Card>
       <CardHeader className="flex-wrap">
@@ -140,85 +165,95 @@ export function DailyChart({
         </div>
       </CardHeader>
       <CardBody>
-        {max === 0 ? (
-          <p className="text-ink-muted py-6 text-center text-sm">
-            이 기간에는 판매가 없습니다.
-          </p>
-        ) : (
-          <figure className="m-0">
-            {/* 축 라벨 자리를 컨테이너 높이에 포함시킨다. 그리기 영역만 재면
-                라벨이 잘려서 카드 안에 작은 스크롤이 생긴다. */}
-            <div
-              // 묶음을 바꾸면 막대를 새로 만들어 차오르는 동작이 다시 돈다.
-              key={grain}
-              className="flex h-36 justify-center gap-[2px]"
-              role="img"
-              aria-label={`${first.label}부터 ${last.label}까지 ${GRAIN_LABEL[grain]} 매출 막대그래프. 최고 ${formatWon(max)}.`}
-            >
-              {buckets.map((d, i) => {
-                const on = hover === d.key
-                // 양 끝 근처의 말풍선은 가운데 정렬하면 카드 밖으로 잘린다. 앞 15% 는 왼쪽에, 뒤 15% 는 오른쪽에 붙인다.
-                const edge =
-                  i < buckets.length * 0.15
-                    ? 'left-0'
-                    : i > buckets.length * 0.85
-                      ? 'right-0'
-                      : 'left-1/2 -translate-x-1/2'
-                return (
-                  <div
-                    key={d.key}
-                    className={cn(col, 'relative h-full justify-end')}
-                    onPointerEnter={() => setHover(d.key)}
-                    onPointerLeave={() => setHover(null)}
-                  >
-                    {on ? (
-                      <div
-                        role="tooltip"
-                        className={cn(
-                          'bg-ink-strong text-ink-inverted pointer-events-none absolute z-10 rounded-md px-2 py-1 text-xs whitespace-nowrap shadow-sm',
-                          edge,
-                        )}
-                        style={{ bottom: `calc(${(d.revenue / max) * 100}% + 6px)` }}
-                      >
-                        <span className="text-ink-inverted/70 mr-1.5">{d.label}</span>
-                        <span className="font-semibold" data-numeric>
-                          {formatWon(d.revenue)}
-                        </span>
-                      </div>
-                    ) : null}
+        {/* 폭을 재는 칸. CardBody 는 ref 를 안 받아서 한 겹 감싼다. */}
+        <div ref={bodyRef}>
+          {max === 0 ? (
+            <p className="text-ink-muted py-6 text-center text-sm">
+              이 기간에는 판매가 없습니다.
+            </p>
+          ) : (
+            <figure className="m-0">
+              {/* 축 라벨 자리를 컨테이너 높이에 포함시킨다. 그리기 영역만 재면
+                  라벨이 잘려서 카드 안에 작은 스크롤이 생긴다. */}
+              <div
+                // 묶음을 바꾸면 막대를 새로 만들어 차오르는 동작이 다시 돈다.
+                key={grain}
+                className="flex h-36 justify-center gap-[2px]"
+                role="img"
+                aria-label={`${first.label}부터 ${last.label}까지 ${GRAIN_LABEL[grain]} 매출 막대그래프. 최고 ${formatWon(max)}.`}
+              >
+                {buckets.map((d, i) => {
+                  const on = hover === d.key
+                  // 양 끝 근처의 말풍선은 가운데 정렬하면 카드 밖으로 잘린다. 앞 15% 는 왼쪽에, 뒤 15% 는 오른쪽에 붙인다.
+                  const edge =
+                    i < buckets.length * 0.15
+                      ? 'left-0'
+                      : i > buckets.length * 0.85
+                        ? 'right-0'
+                        : 'left-1/2 -translate-x-1/2'
+                  return (
                     <div
-                      className={cn(
-                        'bar-rise w-full rounded-t-[4px] transition-colors',
-                        // 같은 계열은 한 색이다. 올린 막대만 한 단 진해지는 건 크기가 아니라 "지금 이거" 를 말하는 것.
-                        on ? 'bg-primary-hover' : 'bg-primary',
-                      )}
-                      style={{ height: `${(d.revenue / max) * 100}%` }}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* 기준선은 실선 헤어라인. 점선은 "예상치"나 "임계값"으로 읽힌다. */}
-            <div className="bg-border-base mt-1 h-px w-full" />
-
-            {few ? (
-              // 막대 줄과 같은 열 배치를 반복해 라벨이 제 막대 아래 놓인다.
-              <div className="text-ink-subtle mt-1.5 flex justify-center gap-[2px] text-xs">
-                {buckets.map((d) => (
-                  <span key={d.key} className={cn(col, 'items-center')}>
-                    <span className="max-w-full truncate">{d.label}</span>
-                  </span>
-                ))}
+                      key={d.key}
+                      className={cn(col, 'relative h-full justify-end')}
+                      onPointerEnter={() => setHover(d.key)}
+                      onPointerLeave={() => setHover(null)}
+                    >
+                      {on ? (
+                        <div
+                          role="tooltip"
+                          className={cn(
+                            'bg-ink-strong text-ink-inverted pointer-events-none absolute z-10 rounded-md px-2 py-1 text-xs whitespace-nowrap shadow-sm',
+                            edge,
+                          )}
+                          style={{ bottom: `calc(${(d.revenue / max) * 100}% + 6px)` }}
+                        >
+                          <span className="text-ink-inverted/70 mr-1.5">{d.label}</span>
+                          <span className="font-semibold" data-numeric>
+                            {formatWon(d.revenue)}
+                          </span>
+                        </div>
+                      ) : null}
+                      <div
+                        className={cn(
+                          'bar-rise w-full rounded-t-[4px] transition-colors',
+                          // 같은 계열은 한 색이다. 올린 막대만 한 단 진해지는 건 크기가 아니라 "지금 이거" 를 말하는 것.
+                          on ? 'bg-primary-hover' : 'bg-primary',
+                        )}
+                        style={{ height: `${(d.revenue / max) * 100}%` }}
+                      />
+                    </div>
+                  )
+                })}
               </div>
-            ) : (
-              <div className="text-ink-subtle mt-1.5 flex justify-between text-xs">
-                <span>{first.label}</span>
-                <span>{last.label}</span>
-              </div>
-            )}
-          </figure>
-        )}
+
+              {/* 기준선은 실선 헤어라인. 점선은 "예상치"나 "임계값"으로 읽힌다. */}
+              <div className="bg-border-base mt-1 h-px w-full" />
+
+              {few ? (
+                // 막대 줄과 같은 열 배치를 반복해 라벨이 제 막대 아래 놓인다.
+                <div className="text-ink-subtle mt-1.5 flex justify-center gap-[2px] text-xs">
+                  {buckets.map((d, i) => (
+                    <span
+                      key={d.key}
+                      className={cn(col, 'items-center', !shown.has(i) && 'invisible')}
+                    >
+                      <span
+                        className={cn('max-w-full truncate', step > 1 && 'max-w-none overflow-visible')}
+                      >
+                        {d.label}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-ink-subtle mt-1.5 flex justify-between text-xs">
+                  <span>{first.label}</span>
+                  <span>{last.label}</span>
+                </div>
+              )}
+            </figure>
+          )}
+        </div>
 
         {/* 마우스를 올려야만 값을 알 수 있으면 안 된다. 표로도 읽히게 둔다. */}
         {max > 0 ? (

@@ -32,6 +32,11 @@ function Empty({ text }: { text: string }) {
 // 표마다 달라진다 (2열 그리드에서 옆 표와 줄이 어긋나 보였다).
 const TH = 'px-4 py-3 font-medium whitespace-nowrap'
 const TD = 'px-4 py-3.5 text-sm'
+// 숫자 칸(text-right)에는 whitespace-nowrap 을 붙인다. 표가 칸보다 넓으면 브라우저가 숫자 열부터
+// 최소폭으로 줄여서 휴대폰에서 "269,100 / 원"처럼 단위만 다음 줄로 떨어졌다.
+// 옆 스크롤 칸(overflow-x-auto)의 relative 는 머리글 sr-only(position:absolute)가 그 칸을
+// 기준으로 잡게 하려는 것 — 없으면 문서 전체가 기준이라 표 밖에서 페이지 폭을 늘릴 수 있다
+// (재고 삭제됨 탭에서 실제로 화면이 옆으로 밀렸다).
 const TR = 'border-border-base border-b last:border-0 hover:bg-surface-sunken/60'
 
 export function TopProductsTable({ rows }: { rows: TopProduct[] }) {
@@ -49,7 +54,7 @@ export function TopProductsTable({ rows }: { rows: TopProduct[] }) {
         {rows.length === 0 ? (
           <Empty text="이 기간에는 판매가 없습니다." />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[38rem] text-sm">
               <thead className="bg-surface-sunken text-ink-muted text-xs font-medium">
                 <tr>
@@ -85,22 +90,22 @@ export function TopProductsTable({ rows }: { rows: TopProduct[] }) {
                     <td className={TD}>
                       <Bar value={Number(r.revenue ?? 0)} max={max} />
                     </td>
-                    <td className={cn(TD, 'text-ink-muted text-right')}>
+                    <td className={cn(TD, 'text-ink-muted text-right whitespace-nowrap')}>
                       {formatQty(Number(r.qty_sold ?? 0))}
                     </td>
-                    <td className={cn(TD, 'text-ink text-right')}>
+                    <td className={cn(TD, 'text-ink text-right whitespace-nowrap')}>
                       {formatWon(r.revenue)}
                     </td>
                     <td
                       className={cn(
                         TD,
-                        'text-right',
+                        'text-right whitespace-nowrap',
                         Number(r.margin ?? 0) < 0 ? 'text-loss font-medium' : 'text-ink-muted',
                       )}
                     >
                       {formatWon(r.margin)}
                     </td>
-                    <td className={cn(TD, 'pr-5 text-ink-muted text-right')}>
+                    <td className={cn(TD, 'pr-5 text-ink-muted text-right whitespace-nowrap')}>
                       {r.margin_rate}%
                     </td>
                   </tr>
@@ -126,7 +131,7 @@ export function CategoryTable({ rows }: { rows: CategoryStat[] }) {
         {rows.length === 0 ? (
           <Empty text="이 기간에는 판매가 없습니다." />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[34rem] text-sm">
               <thead className="bg-surface-sunken text-ink-muted text-xs font-medium">
                 <tr>
@@ -154,11 +159,11 @@ export function CategoryTable({ rows }: { rows: CategoryStat[] }) {
                     <td className={TD}>
                       <Bar value={Number(r.revenue ?? 0)} max={max} />
                     </td>
-                    <td className={cn(TD, 'text-ink-muted text-right')}>
+                    <td className={cn(TD, 'text-ink-muted text-right whitespace-nowrap')}>
                       {r.revenue_share}%
                     </td>
-                    <td className={cn(TD, 'text-ink text-right')}>{formatWon(r.revenue)}</td>
-                    <td className={cn(TD, 'pr-5 text-ink-muted text-right')}>
+                    <td className={cn(TD, 'text-ink text-right whitespace-nowrap')}>{formatWon(r.revenue)}</td>
+                    <td className={cn(TD, 'pr-5 text-ink-muted text-right whitespace-nowrap')}>
                       {r.margin_rate}%
                     </td>
                   </tr>
@@ -184,7 +189,7 @@ export function SupplierTable({ rows }: { rows: SupplierStat[] }) {
         {rows.length === 0 ? (
           <Empty text="이 기간에는 입고가 없습니다." />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[30rem] text-sm">
               <thead className="bg-surface-sunken text-ink-muted text-xs font-medium">
                 <tr>
@@ -212,13 +217,13 @@ export function SupplierTable({ rows }: { rows: SupplierStat[] }) {
                     <td className={TD}>
                       <Bar value={Number(r.purchase_amount ?? 0)} max={max} />
                     </td>
-                    <td className={cn(TD, 'text-ink-muted text-right')}>
+                    <td className={cn(TD, 'text-ink-muted text-right whitespace-nowrap')}>
                       {formatQty(Number(r.purchase_count ?? 0))}
                     </td>
-                    <td className={cn(TD, 'text-ink-muted text-right')}>
+                    <td className={cn(TD, 'text-ink-muted text-right whitespace-nowrap')}>
                       {formatQty(Number(r.qty_purchased ?? 0))}
                     </td>
-                    <td className={cn(TD, 'pr-5 text-ink text-right')}>
+                    <td className={cn(TD, 'pr-5 text-ink text-right whitespace-nowrap')}>
                       {formatWon(r.purchase_amount)}
                     </td>
                   </tr>
@@ -246,7 +251,7 @@ export function TurnoverTable({ rows }: { rows: TurnoverStat[] }) {
           <Empty text="계산할 재고가 없습니다." />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full min-w-[32rem] text-sm">
                 <thead className="bg-surface-sunken text-ink-muted text-xs font-medium">
                   <tr>
@@ -273,16 +278,16 @@ export function TurnoverTable({ rows }: { rows: TurnoverStat[] }) {
                       <td className={cn(TD, 'pl-5 text-ink font-medium')}>
                         {r.category_name}
                       </td>
-                      <td className={cn(TD, 'text-ink-muted text-right')}>
+                      <td className={cn(TD, 'text-ink-muted text-right whitespace-nowrap')}>
                         {formatWon(r.period_cogs)}
                       </td>
-                      <td className={cn(TD, 'text-ink-muted text-right')}>
+                      <td className={cn(TD, 'text-ink-muted text-right whitespace-nowrap')}>
                         {formatWon(r.stock_value_now)}
                       </td>
-                      <td className={cn(TD, 'text-ink text-right')}>
+                      <td className={cn(TD, 'text-ink text-right whitespace-nowrap')}>
                         {Number(r.turnover_annual ?? 0).toFixed(2)}회
                       </td>
-                      <td className={cn(TD, 'pr-5 text-ink-muted text-right')}>
+                      <td className={cn(TD, 'pr-5 text-ink-muted text-right whitespace-nowrap')}>
                         {r.days_of_stock === null ? '—' : `${r.days_of_stock}일`}
                       </td>
                     </tr>
