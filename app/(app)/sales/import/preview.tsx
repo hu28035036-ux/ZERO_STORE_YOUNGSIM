@@ -196,6 +196,21 @@ export function ImportPreview({
     )
   }
 
+  // 확인 필요 목록 머리와 메모 칸 위, 두 버튼이 같이 부른다.
+  function skipAllUnresolved() {
+    setLines((prev) =>
+      prev
+        ? prev.map((l) =>
+            l.state.kind === 'ambiguous' ||
+            l.state.kind === 'missing' ||
+            l.state.kind === 'invalid'
+              ? { ...l, state: { kind: 'skipped', prev: l.state } }
+              : l,
+          )
+        : prev,
+    )
+  }
+
   async function confirm(opts: { force: boolean; excludeDates?: string[] }) {
     if (!summary) return
     setSaving(true)
@@ -390,19 +405,7 @@ export function ImportPreview({
             const line = lines.find((l) => l.no === no)
             if (line) setLineState(no, { kind: 'skipped', prev: line.state })
           }}
-          onSkipAll={() => {
-            setLines((prev) =>
-              prev
-                ? prev.map((l) =>
-                    l.state.kind === 'ambiguous' ||
-                    l.state.kind === 'missing' ||
-                    l.state.kind === 'invalid'
-                      ? { ...l, state: { kind: 'skipped', prev: l.state } }
-                      : l,
-                  )
-                : prev,
-            )
-          }}
+          onSkipAll={skipAllUnresolved}
         />
       ) : null}
 
@@ -430,6 +433,17 @@ export function ImportPreview({
       ) : null}
 
       {s.stock.length > 0 ? <StockDelta device={device} stock={s.stock} /> : null}
+
+      {/* 목록 머리의 같은 버튼을 여기에 한 번 더 둔다. 못 찾은 줄이 수십 개면 목록과
+          재고 변화 표를 지나 여기까지 내려온 뒤에야 확정이 잠긴 걸 알게 되는데, 그때
+          다시 맨 위로 올라가야 했다. 한 줄뿐이면 "모두"가 어색해 문구만 바꾼다. */}
+      {s.unresolved.length > 0 ? (
+        <div className="flex justify-end">
+          <Button variant="secondary" onClick={skipAllUnresolved}>
+            {s.unresolved.length > 1 ? `${s.unresolved.length}줄 모두 건너뛰기` : '1줄 건너뛰기'}
+          </Button>
+        </div>
+      ) : null}
 
       <Card className="p-4">
         <Input
