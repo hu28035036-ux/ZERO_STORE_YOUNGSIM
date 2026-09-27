@@ -2,9 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useRef } from 'react'
 
 import { cn } from '@/lib/cn'
 import { isActive, NAV } from '@/lib/nav'
+
+import { useHeaderHeightVar } from './use-header-height'
 
 /**
  * 데스크톱 셸: 상단 바 + 탭 내비 + 본문 (2026-09-21 2차 리디자인, A2 Vercel 식).
@@ -26,10 +29,15 @@ export function DesktopShell({
 }) {
   const pathname = usePathname()
   const current = NAV.find((item) => isActive(pathname, item.href))
+  const headerRef = useRef<HTMLElement>(null)
+  useHeaderHeightVar(headerRef)
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="bg-surface-nav border-border-base sticky top-0 z-20 border-b">
+      <header
+        ref={headerRef}
+        className="bg-surface-nav border-border-base sticky top-0 z-20 border-b"
+      >
         <div className="mx-auto flex h-14 w-full max-w-[1280px] items-center justify-between px-7">
           <div className="flex min-w-0 items-center gap-3">
             <Brand storeName={storeName} />

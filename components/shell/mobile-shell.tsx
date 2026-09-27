@@ -1,10 +1,12 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
+import { useRef } from 'react'
 
 import { TABS } from '@/lib/nav'
 
 import { Brand, TabNav } from './desktop-shell'
+import { useHeaderHeightVar } from './use-header-height'
 
 /**
  * 휴대폰 셸: 상단 제목 + 상단 탭 (2026-09-21 2차 리디자인, A2).
@@ -24,10 +26,15 @@ export function MobileShell({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const headerRef = useRef<HTMLElement>(null)
+  useHeaderHeightVar(headerRef)
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="bg-surface/90 border-border-base sticky top-0 z-10 border-b backdrop-blur">
+      <header
+        ref={headerRef}
+        className="bg-surface/90 border-border-base sticky top-0 z-10 border-b backdrop-blur"
+      >
         <div className="flex h-12 items-center justify-between gap-3 px-4">
           {/*
             가게 이름은 제목이 아니라 상표다. h1 로 두면 각 화면이 이미 갖고 있는
