@@ -156,7 +156,10 @@ export default async function HomePage() {
 
       <SiteLinks />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]">
+      {/* grid-cols-1(= minmax(0,1fr)) 을 빼지 마라. lg 아래에서 열 정의가 없으면 암묵 열이
+          auto 라, 칸이 가장 긴 상품명 줄의 최소폭만큼 커진다(truncate 는 줄을 안 바꾼다).
+          375px 휴대폰에서 343px 그릇에 416px 칸이 잡혀 화면 전체가 가로로 넘쳤다. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,1fr)]">
         <TopSellersCard
           categories={byCategory.data ?? []}
           products={top.data ?? []}
@@ -196,9 +199,10 @@ export default async function HomePage() {
                     className="flex items-center justify-between gap-3 px-5 py-4"
                   >
                     <div className="min-w-0">
-                      <div className="text-ink truncate text-sm font-semibold">
-                        {row.product_name}
-                      </div>
+                      {/* 한 줄로 자르지 않는다. 맛만 다른 상품이 나란히 부족해지는 일이 흔해서
+                          (한끼곤약젤리 석류·포도·소다…) 자르면 뒤에 붙은 맛이 잘려 360px
+                          휴대폰에서 다섯 줄이 똑같이 보였다. 두 줄이 되더라도 다 보인다. */}
+                      <div className="text-ink text-sm font-semibold">{row.product_name}</div>
                       <div className="text-ink-subtle truncate text-xs">
                         {row.option_label ? `${row.option_label} · ` : ''}
                         기준 {row.low_stock_threshold ?? 0}
