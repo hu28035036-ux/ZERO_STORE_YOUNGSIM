@@ -141,7 +141,7 @@ export default async function MovementsPage({
                 <Search
                   size={18}
                   aria-hidden
-                  className="text-ink-subtle pointer-events-none absolute top-1/2 left-4 -translate-y-1/2"
+                  className="text-ink-subtle pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
                 />
                 <input
                   type="search"
@@ -150,16 +150,19 @@ export default async function MovementsPage({
                   // 스캐너는 코드를 치고 엔터를 누른다. 다만 결과가 한 건으로
                   // 떨어진 화면에서는 그 줄의 수량 칸이 포커스를 가져간다.
                   autoFocus={!single}
-                  placeholder="상품명 · 바코드로 찾기"
+                  // 360px 휴대폰에서 글자가 들어갈 자리가 좁다 — type=search 는 지우기(×) 자리를 늘
+                  // 비워 둔다(약 15px). 그래서 문구를 줄이고, 돋보기 여백(pl-10)과 찾기 버튼
+                  // 여백(px-4)도 한 단 줄여 "상품명·바코드"가 다 들어가게 했다.
+                  placeholder="상품명·바코드"
                   aria-label="상품 찾기"
                   autoCapitalize="none"
                   autoComplete="off"
-                  className="bg-surface-sunken text-ink placeholder:text-ink-subtle focus:border-primary focus:bg-surface h-12 w-full rounded-xl border border-transparent pr-3 pl-11 text-base outline-none transition-colors"
+                  className="bg-surface-sunken text-ink placeholder:text-ink-subtle focus:border-primary focus:bg-surface h-12 w-full rounded-xl border border-transparent pr-3 pl-10 text-base outline-none transition-colors"
                 />
               </div>
               <button
                 type="submit"
-                className="bg-primary text-primary-ink hover:bg-primary-hover inline-flex h-12 items-center rounded-xl px-5 text-[0.9375rem] font-medium transition-[background-color,transform] duration-150 select-none active:scale-[0.97]"
+                className="bg-primary text-primary-ink hover:bg-primary-hover inline-flex h-12 items-center rounded-xl px-4 text-[0.9375rem] font-medium transition-[background-color,transform] duration-150 select-none active:scale-[0.97]"
               >
                 찾기
               </button>

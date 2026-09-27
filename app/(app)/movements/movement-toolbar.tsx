@@ -19,7 +19,9 @@ import {
 export function MovementToolbar({ query }: { query: MovementQuery }) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-2 overflow-x-auto">
+      {/* 줄을 바꿔 칩을 다 보인다. 옆으로 미는 줄이면 360px 휴대폰에서 끝의 "판매" 칩이 화면
+          밖에 있어, 그걸 골라 둔 상태에서도 지금 어떤 종류를 보는지 알 수 없었다. */}
+      <div className="flex flex-wrap gap-2">
         {FILTER_TYPES.map((t) => {
           const on = query.type === t
           return (

@@ -8,7 +8,9 @@ import { VoidButton } from './void-button'
 
 export function MovementTable({ rows }: { rows: MovementRow[] }) {
   return (
-    <Card className="overflow-x-auto">
+    // relative: 머리칸의 sr-only(position:absolute)가 이 카드를 기준으로 자리 잡게 한다. 없으면
+    // 좁은 창에서 표 오른쪽 끝 자리가 페이지 폭을 늘린다(재고 삭제됨 탭에서 실제로 밀렸다).
+    <Card className="relative overflow-x-auto">
       <table className="w-full min-w-[60rem] text-sm">
         <thead className="bg-surface-sunken text-ink-muted text-xs font-medium">
           <tr>
@@ -69,10 +71,12 @@ export function MovementTable({ rows }: { rows: MovementRow[] }) {
                 <td className="px-4 py-3.5 text-right whitespace-nowrap">
                   <QtyDelta row={row} />
                 </td>
-                <td className="text-ink-muted px-4 py-3.5 text-right" data-numeric>
+                {/* 숫자 칸은 줄을 못 바꾸게 한다 — 표가 칸을 좁게 잡으면 "39 / 5", "4,830 / 원"처럼
+                    숫자 안에서 꺾여 재고를 잘못 읽는다. 수량 칸은 원래 그랬다. */}
+                <td className="text-ink-muted px-4 py-3.5 text-right whitespace-nowrap" data-numeric>
                   {formatQty(row.stock_after)}
                 </td>
-                <td className="text-ink-muted px-4 py-3.5 text-right" data-numeric>
+                <td className="text-ink-muted px-4 py-3.5 text-right whitespace-nowrap" data-numeric>
                   {row.type === 'purchase' && row.unit_cost
                     ? formatWon(row.unit_cost)
                     : '—'}

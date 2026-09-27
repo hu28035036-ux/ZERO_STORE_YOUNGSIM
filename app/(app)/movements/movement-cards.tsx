@@ -31,7 +31,10 @@ export function MovementCards({ rows }: { rows: MovementRow[] }) {
                     <p className="text-ink-muted truncate text-sm">{row.option_label}</p>
                   ) : null}
                 </div>
-                <div className="flex flex-col items-end gap-1">
+                {/* shrink-0·nowrap: 긴 상품명과 폭을 나눠 갖다가 이 칸이 18~25px 까지 눌려
+                    "0개로 맞/춤 (-4)", "잔/여/9"처럼 세로로 쌓였다(휴대폰 100건 중 23건).
+                    줄어드는 쪽은 말줄임이 되는 상품명이어야 한다. */}
+                <div className="flex shrink-0 flex-col items-end gap-1 whitespace-nowrap">
                   <QtyDelta row={row} />
                   <span className="text-ink-subtle text-xs" data-numeric>
                     잔여 {formatQty(row.stock_after)}

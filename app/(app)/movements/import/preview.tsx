@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
@@ -279,18 +279,71 @@ export function PurchaseImportPreview({
     (a, b) => a[1] - b[1],
   )
 
+  // 표와 휴대폰 카드가 같은 입력칸·버튼·숫자 표기를 쓴다 — 두 벌로 두면 한쪽만 고쳐지는 날이 온다.
+  type Listed = (typeof s.listed)[number]
+  type Line = ReturnType<typeof resolveLine>
+  type Match = NonNullable<Listed['match']>
+  const qtyInput = (r: Listed) => (
+    <NumberInput
+      aria-label={`${r.no}줄 수량`}
+      value={r.qtyText}
+      disabled={r.skipped}
+      onChange={(e) => patchRow(r.no, { qtyText: e.target.value })}
+      className="w-20 text-right"
+    />
+  )
+  const skipButton = (r: Listed) => (
+    <Button variant="ghost" size="sm" onClick={() => patchRow(r.no, { skipped: !r.skipped })}>
+      {r.skipped ? '되살리기' : '빼기'}
+    </Button>
+  )
+  const incoming = (line: Line, m: Match) =>
+    line.boxes != null ? (
+      <>
+        {formatQty(line.boxes)}
+        {m.purchaseUnitName || '박스'} ={' '}
+        <b>
+          {formatQty(line.qty)}
+          {m.unit}
+        </b>
+      </>
+    ) : (
+      <b>
+        {formatQty(line.qty)}
+        {m.unit}
+      </b>
+    )
+  const unitCostText = (line: Line) =>
+    line.unitCost != null ? (
+      formatWon(line.unitCost)
+    ) : (
+      <span className="text-ink-muted">지금 원가</span>
+    )
+  const stockChange = (line: Line, m: Match) => (
+    <>
+      <span className="text-ink-muted">{formatQty(m.stockQty)}</span>
+      <span className="text-ink-subtle"> → </span>
+      <span className="text-ink font-medium">{formatQty(m.stockQty + line.qty)}</span>
+    </>
+  )
+
   return (
     <div className="flex flex-col gap-4">
       {/* 열을 잘못 잡아도 숫자는 멀쩡해 보인다 — 사람이 대조할 지점이 여기다 */}
       <Card className="p-4">
         <p className="text-ink text-sm leading-relaxed">
           파일을 이렇게 읽었습니다:{' '}
+          {/* 구분점(" · ")은 줄바꿈 금지 밖에 둔다. 안에 넣으면 항목 사이에 줄을 바꿀 틈이 하나도
+              없어서, 휴대폰에서 이 한 줄이 카드와 화면 밖으로 튀어나가 페이지 전체가 옆으로
+              밀렸다(360·390 모두 문서 폭 537px). 한 항목("수량←주문수량") 안에서만 안 꺾는다. */}
           {picked.map(([key, i], idx) => (
-            <span key={key} className="whitespace-nowrap">
+            <Fragment key={key}>
               {idx > 0 ? ' · ' : ''}
-              <b>{COLUMN_LABEL[key]}</b>
-              <span className="text-ink-muted">←{headers[i] || `${i + 1}번째 열`}</span>
-            </span>
+              <span className="whitespace-nowrap">
+                <b>{COLUMN_LABEL[key]}</b>
+                <span className="text-ink-muted">←{headers[i] || `${i + 1}번째 열`}</span>
+              </span>
+            </Fragment>
           ))}
         </p>
         <p className="text-ink-muted mt-1 text-sm">
@@ -331,7 +384,13 @@ export function PurchaseImportPreview({
           <CardTitle>수량 해석</CardTitle>
         </CardHeader>
         <CardBody className="flex flex-col gap-4">
-          <div role="radiogroup" aria-label="수량 해석" className="grid grid-cols-2 gap-2">
+          {/* 휴대폰은 한 줄에 하나. 두 칸으로 나란히 두면 360px 에서 "박스 수로 (자동 환/산)"처럼
+              글자가 두 줄로 꺾여 44px 버튼을 꽉 채웠다. */}
+          <div
+            role="radiogroup"
+            aria-label="수량 해석"
+            className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+          >
             {(
               [
                 ['auto', '박스 수로 (자동 환산)'],
@@ -390,7 +449,8 @@ export function PurchaseImportPreview({
             </p>
             <ul className="flex flex-col gap-1">
               {s.unmatched.slice(0, 30).map((r) => (
-                <li key={r.no} className="text-ink truncate text-sm">
+                // 한 줄로 자르지 않는다. 이름이 길면 끝에 붙은 파일 수량(" · 1")이 말줄임 뒤로 숨었다.
+                <li key={r.no} className="text-ink text-sm">
                   <span className="text-ink-subtle mr-2" data-numeric>
                     {r.no}줄
                   </span>
@@ -413,12 +473,56 @@ export function PurchaseImportPreview({
         </Card>
       ) : null}
 
-      {/* 반영될 입고 표 — 수량은 여기서 바로 고칠 수 있다 */}
+      {/* 반영될 입고 — 수량은 여기서 바로 고칠 수 있다.
+          휴대폰(sm 아래)은 줄마다 카드다. 표는 최소폭이 736px 라 휴대폰에서는 상품·파일 수량만
+          보이고, 대조해야 할 "2박스 = 60개 · 낱개 매입가 · 재고 18 → 78"은 옆으로 밀어야 나왔다 —
+          밀면 상품명이 사라져 어느 줄의 숫자인지 같이 볼 수 없었다. */}
       <Card>
         <CardHeader>
           <CardTitle>들어올 입고 {s.included.length}줄</CardTitle>
         </CardHeader>
-        <CardBody className="overflow-x-auto">
+        <ul className="divide-border-base divide-y sm:hidden">
+          {s.listed.map((r) => {
+            const line = resolveLine(r)
+            const m = r.match!
+            return (
+              <li
+                key={r.no}
+                className={cn('flex flex-col gap-2 px-5 py-4', r.skipped && 'opacity-45')}
+              >
+                <p className="text-ink text-sm font-medium">
+                  <span className="text-ink-subtle mr-2 font-normal" data-numeric>
+                    {r.no}
+                  </span>
+                  {m.productName}
+                  {m.optionLabel ? (
+                    <span className="text-ink-muted font-normal"> · {m.optionLabel}</span>
+                  ) : null}
+                </p>
+                {r.rawName && r.rawName !== m.productName ? (
+                  <p className="text-ink-subtle text-xs">파일: {r.rawName}</p>
+                ) : null}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-ink-muted text-sm">파일 수량</span>
+                    {qtyInput(r)}
+                  </div>
+                  <p className="text-ink text-sm whitespace-nowrap" data-numeric>
+                    {incoming(line, m)}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-ink-muted flex flex-wrap gap-x-3 text-xs" data-numeric>
+                    <span>낱개 {unitCostText(line)}</span>
+                    <span>재고 {stockChange(line, m)}</span>
+                  </p>
+                  {skipButton(r)}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+        <CardBody className="hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[46rem] text-sm">
             <thead>
               <tr className="text-ink-muted border-border-base border-b text-left text-xs">
@@ -435,7 +539,6 @@ export function PurchaseImportPreview({
               {s.listed.map((r) => {
                 const line = resolveLine(r)
                 const m = r.match!
-                const after = m.stockQty + line.qty
                 return (
                   <tr
                     key={r.no}
@@ -460,53 +563,17 @@ export function PurchaseImportPreview({
                         </span>
                       ) : null}
                     </td>
-                    <td className="py-1.5 pr-3 text-right">
-                      <NumberInput
-                        aria-label={`${r.no}줄 수량`}
-                        value={r.qtyText}
-                        disabled={r.skipped}
-                        onChange={(e) => patchRow(r.no, { qtyText: e.target.value })}
-                        className="w-20 text-right"
-                      />
+                    <td className="py-1.5 pr-3 text-right">{qtyInput(r)}</td>
+                    <td className="text-ink py-1.5 pr-3 text-right whitespace-nowrap" data-numeric>
+                      {incoming(line, m)}
                     </td>
                     <td className="text-ink py-1.5 pr-3 text-right whitespace-nowrap" data-numeric>
-                      {line.boxes != null ? (
-                        <>
-                          {formatQty(line.boxes)}
-                          {m.purchaseUnitName || '박스'} ={' '}
-                          <b>
-                            {formatQty(line.qty)}
-                            {m.unit}
-                          </b>
-                        </>
-                      ) : (
-                        <b>
-                          {formatQty(line.qty)}
-                          {m.unit}
-                        </b>
-                      )}
-                    </td>
-                    <td className="text-ink py-1.5 pr-3 text-right whitespace-nowrap" data-numeric>
-                      {line.unitCost != null ? (
-                        formatWon(line.unitCost)
-                      ) : (
-                        <span className="text-ink-muted">지금 원가</span>
-                      )}
+                      {unitCostText(line)}
                     </td>
                     <td className="py-1.5 pr-3 text-right whitespace-nowrap" data-numeric>
-                      <span className="text-ink-muted">{formatQty(m.stockQty)}</span>
-                      <span className="text-ink-subtle"> → </span>
-                      <span className="text-ink font-medium">{formatQty(after)}</span>
+                      {stockChange(line, m)}
                     </td>
-                    <td className="py-1.5 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => patchRow(r.no, { skipped: !r.skipped })}
-                      >
-                        {r.skipped ? '되살리기' : '빼기'}
-                      </Button>
-                    </td>
+                    <td className="py-1.5 text-right">{skipButton(r)}</td>
                   </tr>
                 )
               })}

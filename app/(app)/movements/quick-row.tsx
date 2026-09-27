@@ -96,9 +96,9 @@ export function QuickRow({
 
   return (
     <Card className="px-4 py-3">
-      {/* 한 줄 배치: 상품 · 종류 토글 · 수량 · 등록. 세로로 쌓으면 한 화면에 세 품목이
-          겨우 들어와서, 연달아 여러 상품을 손보는 사람이 계속 스크롤하게 된다. 좁은
-          화면(모바일)에서는 자연스럽게 두 줄로 접힌다. */}
+      {/* 한 줄 배치: 상품 · 종류 토글 · 날짜 · 수량 · 등록. 세로로 쌓으면 한 화면에 세 품목이
+          겨우 들어와서, 연달아 여러 상품을 손보는 사람이 계속 스크롤하게 된다. 휴대폰에서는
+          세 줄로 접힌다 — 상품 / 종류·날짜 / 수량·등록·자세히. */}
       <form action={formAction} className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <input type="hidden" name="variantId" value={target.variantId} />
         <input type="hidden" name="type" value={type} />
@@ -121,8 +121,8 @@ export function QuickRow({
           </div>
         </div>
 
-        {/* 좁은 화면에서는 이 묶음이 줄바꿈된다 — 자세히가 다음 줄로 내려간다.
-            shrink-0 으로 고정하면 390px 에서 오른쪽으로 잘려 나갔다. */}
+        {/* 좁은 화면에서는 이 묶음이 줄바꿈된다. 묶음 전체를 shrink-0 으로 고정하면 390px 에서
+            오른쪽으로 잘려 나갔다. */}
         <div className="flex flex-wrap items-center gap-2">
           {/* 종류 선택은 세그먼트 컨트롤. 버튼 세 개가 각자 테두리를 가지면 "어느
               것이 켜졌나"보다 "버튼이 셋"이 먼저 보인다. */}
@@ -161,23 +161,28 @@ export function QuickRow({
             onChange={(next) => setDate(next && next <= today ? next : today)}
           />
 
-          <NumberInput
-            name="qty"
-            value={qty}
-            onChange={(e) => setQty(e.target.value)}
-            placeholder={type === 'stocktake' ? '센 수량' : '수량'}
-            aria-label={`${target.productName} ${MOVEMENT_LABEL[type]} 수량`}
-            autoFocus={autoFocus}
-            className="bg-surface-sunken focus:bg-surface h-10 w-20 min-w-0 rounded-lg border-transparent font-semibold sm:w-24"
-          />
-          <Button
-            type="submit"
-            size="sm"
-            disabled={!canSubmit}
-            className="h-10 shrink-0 rounded-lg px-4"
-          >
-            {pending ? '등록 중…' : '등록'}
-          </Button>
+          {/* 수량과 등록은 한 덩어리로 줄을 바꾼다. 따로 두면 375~430px 휴대폰에서 수량은
+              둘째 줄 끝, 등록은 셋째 줄 처음으로 갈라졌고, 달력에 날짜를 고른 줄만 모양이
+              또 달라졌다. */}
+          <div className="flex items-center gap-2">
+            <NumberInput
+              name="qty"
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              placeholder={type === 'stocktake' ? '센 수량' : '수량'}
+              aria-label={`${target.productName} ${MOVEMENT_LABEL[type]} 수량`}
+              autoFocus={autoFocus}
+              className="bg-surface-sunken focus:bg-surface h-10 w-20 min-w-0 rounded-lg border-transparent font-semibold sm:w-24"
+            />
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!canSubmit}
+              className="h-10 shrink-0 rounded-lg px-4"
+            >
+              {pending ? '등록 중…' : '등록'}
+            </Button>
+          </div>
 
           <Link
             // 고른 날짜를 들고 간다 — 큰 폼의 발생일이 오늘로 돌아가 있으면 박스·단가를
