@@ -43,7 +43,8 @@ export default async function EditKitPage({
       />
 
       <Card>
-        <CardHeader>
+        {/* 휴대폰에서는 설명을 제목 아래로 — 한 줄에 두면 제목이 "목록에/서 감추/기"로 쪼개졌다. */}
+        <CardHeader className="max-sm:flex-col max-sm:items-start max-sm:gap-1">
           <CardTitle>목록에서 감추기</CardTitle>
           <p className="text-ink-muted text-sm">
             더 안 들어오는 박스는 감춰 두세요. 이미 넣은 입고 기록은 그대로 남습니다.

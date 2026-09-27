@@ -161,7 +161,9 @@ export function ReceiveForm({
       </Card>
 
       <Card>
-        <CardHeader>
+        {/* 휴대폰에서는 설명을 제목 아래로 — 한 줄에 두면 제목이 37px 폭에 "들어/온 개/수 확/인"으로
+            쪼개졌다. */}
+        <CardHeader className="max-sm:flex-col max-sm:items-start max-sm:gap-1">
           <CardTitle>들어온 개수 확인</CardTitle>
           <p className="text-ink-muted text-sm">
             박스 수에 맞춰 미리 채워 뒀습니다. <b>실제로 다르게 왔으면 그 줄만 고쳐</b>
@@ -182,12 +184,25 @@ export function ReceiveForm({
                       : 'border-border-base')
                 }
               >
+                {/* 이름을 한 줄로 자르지 않는다. 이 화면은 맛만 다른 줄이 열 개 넘게 나란히 서는데
+                    (더존건강 한끼곤약젤리 15종), 자르면 360px 에서 전부 "더존건강 한끼곤약…"으로
+                    똑같이 보여 어느 맛의 개수를 고치는지 알 수 없었다. "고침" 표시가 붙으면 칸이
+                    더 줄어 더 심했다. */}
                 <div className="min-w-0 flex-1">
-                  <p className="text-ink truncate text-sm font-medium">{l.name}</p>
-                  <p className="text-ink-subtle truncate text-xs">
-                    지금 {formatQty(l.stock)}
-                    {l.unit}
-                    {l.per ? ` · 보통 박스당 ${l.per}` : ''}
+                  <p className="text-ink text-sm font-medium">{l.name}</p>
+                  {/* 항목 하나("지금 -2개", "보통 박스당 2")는 한 덩어리로 둔다 — 띄어쓰기에서만 꺾게
+                      되면서 360px 에서 "보통 박스당 / 2"처럼 숫자만 떨어졌다. */}
+                  <p className="text-ink-subtle text-xs">
+                    <span className="whitespace-nowrap">
+                      지금 {formatQty(l.stock)}
+                      {l.unit}
+                    </span>
+                    {l.per ? (
+                      <>
+                        {' · '}
+                        <span className="whitespace-nowrap">보통 박스당 {l.per}</span>
+                      </>
+                    ) : null}
                     {l.option ? ` · ${l.option}` : ''}
                   </p>
                 </div>
@@ -209,10 +224,12 @@ export function ReceiveForm({
           </ul>
 
           {Object.keys(edited).length > 0 ? (
+            // 누를 자리를 버튼 높이(36px)로 키운다. 글자 크기 그대로(16px 높이)면 휴대폰에서 누르기
+            // 어려웠다.
             <button
               type="button"
               onClick={() => setEdited({})}
-              className="text-ink-muted hover:text-ink self-start text-xs underline"
+              className="text-ink-muted hover:text-ink -mx-1 inline-flex h-9 items-center self-start px-1 text-sm underline"
             >
               고친 값 되돌리기
             </button>
@@ -248,7 +265,15 @@ export function ReceiveForm({
         <p className="text-danger text-sm">{state.message}</p>
       ) : null}
 
-      <Button type="submit" disabled={pending || totalQty === 0 || boxCount < 1} full size="lg">
+      {/* h-auto: 박스 이름이 길면 버튼 글자가 두세 줄이 되는데, 높이가 고정이면 넘친 줄이 잘린다
+          (공용 버튼은 넘친 글자를 숨긴다). 최소 높이는 그대로 지킨다. */}
+      <Button
+        type="submit"
+        disabled={pending || totalQty === 0 || boxCount < 1}
+        full
+        size="lg"
+        className="min-h-touch-lg h-auto py-3"
+      >
         {pending ? '반영 중…' : `${kitName} 입고하기`}
       </Button>
       {totalQty === 0 ? (

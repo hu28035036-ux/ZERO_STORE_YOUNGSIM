@@ -62,7 +62,8 @@ export default async function KitsPage() {
             <li key={k.kit_id}>
               <Card className="hover:border-border-strong flex items-center gap-3 p-4 transition-colors">
                 <div className="min-w-0 flex-1">
-                  <p className="text-ink truncate font-medium">{k.name}</p>
+                  {/* 한 줄로 자르지 않는다 — 같은 브랜드 박스는 뒷부분만 달라서 잘리면 헷갈린다. */}
+                  <p className="text-ink font-medium">{k.name}</p>
                   <p className="text-ink-subtle mt-0.5 text-xs">
                     <span data-numeric>{k.item_count}</span>종류 · 한 박스에{' '}
                     <span data-numeric>{k.default_total_qty}</span>개

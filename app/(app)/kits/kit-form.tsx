@@ -104,7 +104,9 @@ export function KitForm({
       </Card>
 
       <Card>
-        <CardHeader>
+        {/* 휴대폰에서는 제목 아래로 설명을 내린다. 제목과 긴 설명을 한 줄에 두면 설명이 폭을 다
+            가져가 제목이 32px 폭에 "박스/에/든/것"으로 세로로 쪼개졌다. */}
+        <CardHeader className="max-sm:flex-col max-sm:items-start max-sm:gap-1">
           <CardTitle>박스에 든 것</CardTitle>
           <p className="text-ink-muted text-sm">
             보통 한 박스에 몇 개씩 드는지 적어 주세요. 실제로 다르게 오는 날은
@@ -123,13 +125,15 @@ export function KitForm({
               {items.map((it, idx) => (
                 <li
                   key={it.variantId}
-                  className="border-border-base flex items-center gap-3 rounded-lg border p-3"
+                  // 휴대폰은 간격(gap-2)과 단위 칸(w-6)을 한 단 줄인다. 개수칸·단위·빼기가 한 줄에 서서
+                  // 360px 에서 이름 칸이 76px 뿐이라 "한끼곤약젤 / 리 망고"처럼 낱말 안에서 꺾였다.
+                  className="border-border-base flex items-center gap-2 rounded-lg border p-3 sm:gap-3"
                 >
+                  {/* 이름을 한 줄로 자르지 않는다. 같은 브랜드의 맛만 다른 상품을 담는 화면이라
+                      뒤에 붙은 맛이 잘리면 줄끼리 똑같이 보였다("다신샵 곤…" 세 줄). */}
                   <div className="min-w-0 flex-1">
-                    <p className="text-ink truncate text-sm font-medium">{it.label}</p>
-                    {it.option ? (
-                      <p className="text-ink-subtle truncate text-xs">{it.option}</p>
-                    ) : null}
+                    <p className="text-ink text-sm font-medium">{it.label}</p>
+                    {it.option ? <p className="text-ink-subtle text-xs">{it.option}</p> : null}
                   </div>
                   <NumberInput
                     aria-label={`${it.label} 박스당 개수`}
@@ -142,7 +146,7 @@ export function KitForm({
                       )
                     }
                   />
-                  <span className="text-ink-muted w-8 text-xs">{it.unit}</span>
+                  <span className="text-ink-muted w-6 shrink-0 text-xs sm:w-8">{it.unit}</span>
                   <button
                     type="button"
                     aria-label={`${it.label} 빼기`}
@@ -173,7 +177,8 @@ export function KitForm({
         <Button type="submit" disabled={pending || items.length < 2} full>
           {pending ? '저장 중…' : '저장'}
         </Button>
-        <Link href="/kits" className={buttonClass('ghost')}>
+        {/* shrink-0·nowrap: 옆의 저장 버튼(full)이 폭을 다 가져가 "취/소"로 꺾였다. */}
+        <Link href="/kits" className={buttonClass('ghost', 'md', false, 'shrink-0 whitespace-nowrap')}>
           취소
         </Link>
       </div>
