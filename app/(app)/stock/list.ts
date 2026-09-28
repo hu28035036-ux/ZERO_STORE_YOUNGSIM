@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { isPastTheEnd } from '@/lib/pagination'
 import { createClient } from '@/lib/supabase/server'
 
 import type { ArchivedProduct } from './archived-table'
@@ -46,23 +47,15 @@ export async function fetchStockPage(query: StockQuery) {
   list = list.order('variant_id')
 
   const { data, error, count, status } = await list.range(offset, offset + PAGE_SIZE - 1)
-  if (pastTheEnd(status, error) && query.page > 1) return fetchStockPage({ ...query, page: 1 })
+  // 쪽 수보다 먼 쪽이면 1쪽을 다시 받아 개수를 얻는다 — page.tsx 가 그 개수로 마지막 쪽으로
+  // 보낸다(isPastTheEnd 주석). 드문 길이다: 다른 기기에서 지워 쪽이 줄었거나, 주소를 손으로 고쳤을 때.
+  if (isPastTheEnd(status, error) && query.page > 1) return fetchStockPage({ ...query, page: 1 })
 
   return {
     rows: (data ?? []) as StockRow[],
     total: count ?? 0,
     error: error?.message ?? null,
   }
-}
-
-/**
- * 쪽 수보다 먼 쪽을 달라고 했나. 그때 PostgREST 는 빈 목록이 아니라 416(PGRST103)을 주고 개수도
- * 안 싣는다 — 그대로 두면 "재고를 불러오지 못했습니다"가 뜬다. 부르는 쪽은 1쪽을 다시 받아 개수를
- * 얻고, page.tsx 가 그 개수로 마지막 쪽으로 보낸다. 드문 길이다(다른 기기에서 지워 쪽이 줄었거나,
- * 주소를 손으로 고쳤을 때). 딱 끝(offset = 개수)은 416 이 아니라 빈 목록이 온다.
- */
-function pastTheEnd(status: number, error: { code?: string } | null): boolean {
-  return status === 416 || error?.code === 'PGRST103'
 }
 
 /** "삭제됨" 탭 한 쪽. 지운 때의 역순이다 — 방금 지운 것을 되살리는 일이 가장 잦다. */
@@ -82,7 +75,7 @@ export async function fetchArchivedPage(query: StockQuery) {
   if (pattern) list = list.ilike('product_name', pattern)
 
   const { data, error, count, status } = await list.range(offset, offset + PAGE_SIZE - 1)
-  if (pastTheEnd(status, error) && query.page > 1) return fetchArchivedPage({ ...query, page: 1 })
+  if (isPastTheEnd(status, error) && query.page > 1) return fetchArchivedPage({ ...query, page: 1 })
 
   return {
     rows: (data ?? []) as ArchivedProduct[],

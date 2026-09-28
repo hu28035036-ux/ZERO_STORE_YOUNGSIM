@@ -6,9 +6,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { cn } from '@/lib/cn'
 import { formatQty } from '@/lib/constants'
-import { pageCount, pageItems } from '@/lib/pagination'
-
-import { PAGE_SIZE, STOCK_LIST_ID, stockHref, type StockQuery } from './query'
+import { pageCount, pageItems, withPage } from '@/lib/pagination'
 
 /**
  * 이 링크들로 넘어가는 쪽. 새 쪽이 그려지면 목록 첫 줄로 올리고 비운다.
@@ -20,13 +18,17 @@ import { PAGE_SIZE, STOCK_LIST_ID, stockHref, type StockQuery } from './query'
  */
 let arriving: number | null = null
 
-function scrollToListTop() {
-  const list = document.getElementById(STOCK_LIST_ID)
+function scrollToListTop(listId: string) {
+  const list = document.getElementById(listId)
   if (!list) return
-  // 첫 줄이 상단 바 밑에 붙어 있는 검색 막대(stock-toolbar.tsx)에 가리지 않게 그 아래로 온다.
-  const bar = document.querySelector<HTMLElement>('[data-stock-toolbar]')
-  const covered = bar ? (parseFloat(getComputedStyle(bar).top) || 0) + bar.offsetHeight : 0
-  // 16px = 막대 카드와 목록 사이의 원래 간격(page 의 gap-6 에서 막대 칸의 아래 여백 py-2 를 뺀 것).
+  // 첫 줄이 위에 붙어 있는 것들에 가리지 않게 그 아래로 온다. 화면이 상단 바 밑에 붙는 막대를
+  // 가졌으면(재고 검색칸, data-sticky-toolbar) 그 막대까지, 아니면 상단 바(셸이 잰 높이)까지다.
+  const bar = document.querySelector<HTMLElement>('[data-sticky-toolbar]')
+  const covered = bar
+    ? (parseFloat(getComputedStyle(bar).top) || 0) + bar.offsetHeight
+    : parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-header-h')) || 0
+  // 16px = 재고 검색 막대 카드와 목록 사이의 원래 간격(page 의 gap-6 에서 막대 칸의 아래 여백 py-2
+  // 를 뺀 것). 막대가 없는 화면에서도 첫 줄이 상단 바에 딱 붙지 않을 만큼이다.
   const top = window.scrollY + list.getBoundingClientRect().top - covered - 16
   window.scrollTo({ top: Math.max(0, top) })
 }
@@ -41,45 +43,61 @@ const BOX = 'inline-flex h-10 items-center justify-center gap-1 rounded-lg text-
 const NUMBERS = { mobile: 5, desktop: 10 } as const
 
 /**
- * 재고 목록 쪽 넘김. 2026-09-28 사용자 요청으로 30개씩 이어 붙이던 무한 스크롤을 대신한다.
+ * 목록 쪽 넘김 — 재고 목록과 입출고 등록 목록이 같이 쓴다(2026-09-28 사용자 요청, 둘 다 30개씩
+ * 이어 붙이던 무한 스크롤을 대신한다). 두 화면이 한 벌을 써야 번호 규칙이 한쪽만 바뀌지 않는다.
  *
  * 쪽 번호는 주소(?page=)에 있고 전부 그냥 링크다 — 길게 눌러 새 탭으로 열기와 뒤로 가기가
  * 그대로 동작한다. 번호 줄의 길이는 쪽마다 달라지지만(끝 쪽에 가면 "… 15"가 빠진다) 이전은
  * 왼쪽 끝·다음은 오른쪽 끝에 못 박아서, "다음"을 같은 자리에서 연달아 누를 수 있다.
+ *
+ * 링크를 만드는 함수 대신 1쪽 주소(base)를 받는다 — 서버 화면이 클라이언트 컴포넌트에 함수를
+ * prop 으로 넘길 수 없다.
  */
-export function StockPager({
-  query,
+export function Pager({
+  base,
+  page: requested,
   total,
+  pageSize,
   device,
+  listId,
+  label,
 }: {
-  query: StockQuery
+  /** 쪽 번호 없는 주소(1쪽). 검색·필터 같은 조건은 여기에 들어 있다. */
+  base: string
+  /** 1부터 센다. */
+  page: number
   total: number
+  pageSize: number
   device: 'mobile' | 'desktop'
+  /** 쪽을 넘긴 뒤 첫 줄을 보일 목록 칸의 id. */
+  listId: string
+  /** 번호 줄의 이름(화면 읽기 프로그램용). */
+  label: string
 }) {
-  const pages = pageCount(total, PAGE_SIZE)
-  const page = Math.min(query.page, pages)
+  const pages = pageCount(total, pageSize)
+  const page = Math.min(requested, pages)
   const mobile = device === 'mobile'
 
   useEffect(() => {
     const target = arriving
     arriving = null
-    if (target === page) scrollToListTop()
-  }, [page])
+    if (target === page) scrollToListTop(listId)
+  }, [page, listId])
 
-  const from = (page - 1) * PAGE_SIZE + 1
-  const to = Math.min(page * PAGE_SIZE, total)
+  const from = (page - 1) * pageSize + 1
+  const to = Math.min(page * pageSize, total)
   // 번호 칸 폭. 휴대폰 36px 는 위 NUMBERS 주석의 폭 계산에 맞춘 값이다.
   const cell = mobile ? 'min-w-9 px-1.5' : 'min-w-10 px-2'
 
-  function pageLink(n: number, className: string, children: ReactNode, label: string | undefined) {
+  function pageLink(n: number, className: string, children: ReactNode, linkLabel: string | undefined) {
     return (
       <Link
-        href={stockHref(query, { page: n })}
+        href={withPage(base, n)}
         scroll={false}
         onNavigate={() => {
           arriving = n
         }}
-        aria-label={label}
+        aria-label={linkLabel}
         className={cn(BOX, 'transition-colors', className)}
       >
         <Pending>{children}</Pending>
@@ -121,7 +139,7 @@ export function StockPager({
       {pages > 1 ? (
         // flex-wrap: 360px 보다 좁은 화면이나 아주 좁은 PC 창에서 번호 줄이 페이지 밖으로 밀지 않게.
         <nav
-          aria-label="재고 목록 쪽"
+          aria-label={label}
           className="flex w-full max-w-3xl flex-wrap items-center justify-between gap-1"
           data-numeric
         >

@@ -1,4 +1,5 @@
 import type { Tables } from '@/lib/database.types'
+import { parsePage } from '@/lib/pagination'
 
 // 검색어 정제는 입출고·판매 화면도 그대로 쓴다. lib 에 두고 여기서는 다시 내보낸다.
 export { likePattern, productSearchFilter } from '@/lib/search'
@@ -63,17 +64,11 @@ const SORT_KEYS = Object.keys(SORTS) as SortKey[]
 export const PAGE_SIZE = 30
 
 /**
- * 목록 칸의 id — 쪽을 넘기면 StockPager 가 이 칸의 위쪽을 검색 막대 바로 아래로 올린다.
- * 'use client' 파일(stock-pager.tsx)에 두면 서버 화면(page.tsx)이 받는 값이 문자열이 아니라
- * 클라이언트 참조가 되어 id 가 엉뚱하게 찍힌다. 그래서 양쪽이 같이 읽는 여기에 둔다.
+ * 목록 칸의 id — 쪽을 넘기면 Pager(components/ui/pager.tsx)가 이 칸의 위쪽을 검색 막대 바로
+ * 아래로 올린다. page.tsx 가 칸의 id 로 찍고 Pager 에 prop 으로 넘긴다. 'use client' 파일에 두면
+ * 서버 화면이 받는 값이 문자열이 아니라 클라이언트 참조가 되어 id 가 엉뚱하게 찍힌다.
  */
 export const STOCK_LIST_ID = 'stock-list'
-
-/**
- * 주소로 받는 쪽 번호의 상한. 그대로 두면 ?page=99999999999999999999 가 offset 3e+21
- * 같은 표기가 되어 DB 가 범위를 못 읽고 오류 화면이 뜬다. 30만 행은 이 가게에 넉넉하다.
- */
-const MAX_PAGE = 10_000
 
 export type StockQuery = {
   q: string
@@ -92,14 +87,12 @@ export function parseStockQuery(sp: {
 }): StockQuery {
   const raw = typeof sp.q === 'string' ? sp.q : ''
   const archivedRaw = typeof sp.archived === 'string' ? sp.archived : ''
-  // 숫자만 받는다. Number() 에 맡기면 "1e3"·"2.5" 도 쪽 번호가 된다.
-  const pageRaw = typeof sp.page === 'string' && /^[1-9]\d*$/.test(sp.page) ? Number(sp.page) : 1
   return {
     q: raw.trim().slice(0, 40),
     filter: FILTERS.find((f) => f === sp.filter) ?? 'all',
     sort: SORT_KEYS.find((s) => s === sp.sort) ?? 'name',
     desc: sp.dir === 'desc',
-    page: Math.min(pageRaw, MAX_PAGE),
+    page: parsePage(sp.page),
     archivedName: archivedRaw.trim().slice(0, 120) || null,
   }
 }

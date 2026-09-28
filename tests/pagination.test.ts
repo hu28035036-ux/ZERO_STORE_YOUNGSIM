@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { pageCount, pageItems } from '../lib/pagination.ts'
+import { isPastTheEnd, pageCount, pageItems, parsePage, withPage } from '../lib/pagination.ts'
 
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i)
 
@@ -98,4 +98,30 @@ test('어떤 쪽 수·현재 쪽에서도 규칙이 지켜진다', () => {
       }
     }
   }
+})
+
+// 재고·입출고 목록이 같이 쓰는 주소 규칙(2026-09-28 입출고도 쪽 넘김이 되면서 공용으로 옮겼다).
+
+test('주소의 쪽 번호 — 없거나 이상하면 1쪽, 터무니없이 크면 상한', () => {
+  assert.equal(parsePage(undefined), 1)
+  for (const raw of ['', '0', '-2', 'abc', '2.5', '1e3']) assert.equal(parsePage(raw), 1, `page=${raw}`)
+  // ?page=2&page=3 처럼 두 번 오면 배열이 된다.
+  assert.equal(parsePage(['2', '3']), 1)
+  assert.equal(parsePage('3'), 3)
+  // 그대로 두면 offset 이 3e+21 같은 표기가 되어 DB 가 범위를 못 읽는다.
+  assert.equal(parsePage('99999999999999999999'), 10_000)
+})
+
+test('쪽 링크 — 1쪽은 주소에 안 남기고, 다른 조건 뒤에 page 를 붙인다', () => {
+  assert.equal(withPage('/movements', 1), '/movements')
+  assert.equal(withPage('/movements', 3), '/movements?page=3')
+  assert.equal(withPage('/movements?q=%EA%B3%A4%EC%95%BD', 2), '/movements?q=%EA%B3%A4%EC%95%BD&page=2')
+})
+
+test('쪽 수보다 먼 쪽을 달라고 했는지 — PostgREST 는 빈 목록 대신 416(PGRST103)을 준다', () => {
+  assert.equal(isPastTheEnd(416, null), true)
+  assert.equal(isPastTheEnd(400, { code: 'PGRST103' }), true)
+  assert.equal(isPastTheEnd(200, null), false)
+  // 권한 오류 같은 다른 실패는 끝을 넘은 것이 아니다 — 그대로 오류로 보여야 한다.
+  assert.equal(isPastTheEnd(401, { code: '42501' }), false)
 })

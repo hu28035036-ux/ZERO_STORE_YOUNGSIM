@@ -5,6 +5,7 @@ import { Boxes, FileUp, Plus, Tag, TriangleAlert, Wallet } from 'lucide-react'
 import { buttonClass } from '@/components/ui/button'
 import { Card, StatTile } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
+import { Pager } from '@/components/ui/pager'
 import { formatQty, formatWon } from '@/lib/constants'
 import { pageCount } from '@/lib/pagination'
 import { getDevice } from '@/lib/server-device'
@@ -14,7 +15,6 @@ import { ArchivedTable } from './archived-table'
 import { fetchArchivedPage, fetchStockPage } from './list'
 import { PAGE_SIZE, parseStockQuery, STOCK_LIST_ID, stockHref, type StockQuery } from './query'
 import { StockCards } from './stock-cards'
-import { StockPager } from './stock-pager'
 import { StockTable } from './stock-table'
 import { StockToolbar } from './stock-toolbar'
 
@@ -122,7 +122,15 @@ export default async function StockPage({
         ) : (
           <div id={STOCK_LIST_ID} className="flex flex-col gap-3">
             <ArchivedTable key={`${query.q}|${query.page}`} rows={archived.rows} device={view} />
-            <StockPager query={query} total={archived.total} device={view} />
+            <Pager
+              base={stockHref(query, { page: 1 })}
+              page={query.page}
+              total={archived.total}
+              pageSize={PAGE_SIZE}
+              device={view}
+              listId={STOCK_LIST_ID}
+              label="삭제한 상품 목록 쪽"
+            />
           </div>
         )}
       </div>
@@ -171,7 +179,15 @@ export default async function StockPage({
               query={query}
             />
           )}
-          <StockPager query={query} total={listResult.total} device={view} />
+          <Pager
+            base={stockHref(query, { page: 1 })}
+            page={query.page}
+            total={listResult.total}
+            pageSize={PAGE_SIZE}
+            device={view}
+            listId={STOCK_LIST_ID}
+            label="재고 목록 쪽"
+          />
         </div>
       )}
     </div>
