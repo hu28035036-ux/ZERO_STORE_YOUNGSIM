@@ -172,7 +172,10 @@ export default async function MovementsPage({
                   aria-label="상품 찾기"
                   autoCapitalize="none"
                   autoComplete="off"
-                  className="bg-surface-sunken text-ink placeholder:text-ink-subtle focus:border-primary focus:bg-surface h-12 w-full rounded-xl border border-transparent pr-3 pl-10 text-base outline-none transition-colors"
+                  // transition 을 하나로 합쳐 둔 이유: transition-colors 와 transition-shadow 는 둘 다
+                  // transition-property 라 같이 달면 한쪽이 덮여, 포커스 배경 전환이나 hover 그림자
+                  // 전환 중 하나가 소리 없이 사라진다.
+                  className="bg-surface-sunken text-ink placeholder:text-ink-subtle focus:border-primary focus:bg-surface h-12 w-full rounded-xl border border-transparent pr-3 pl-10 text-base outline-none transition-[color,background-color,border-color,box-shadow] enabled:hover:not-focus:shadow-field-hover"
                 />
               </div>
               <button

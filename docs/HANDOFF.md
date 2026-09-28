@@ -5,7 +5,8 @@
 여기에는 커밋에 안 남는 것들을 적는다: 무엇이 검증됐고 무엇이 안 됐는지,
 DB 의 현재 상태, 막혀 있는 것, 다시 밟게 될 함정.
 
-최종 갱신: 2026-09-28 / `main` (`ed3ae71` — 프로덕션에 배포됨, 배포 레코드 success·라이브 응답 확인)
+최종 갱신: 2026-09-28 / `main` (프로덕션은 `a7c1cb4` — 배포 레코드 success·라이브 응답 확인. 그 뒤의 입력칸 hover
+그림자 커밋은 로컬 `main` 에만 있다 — push·배포는 사용자가 말할 때 한다)
 
 ---
 
@@ -208,6 +209,26 @@ PC 표의 선택은 쪽을 넘기면 풀린다(체크만 했고 삭제는 안 �
 `/stock?page=2` 를 열면 로그인 뒤 1쪽으로 간다(proxy 의
 `next` 가 경로만 싣는다 — 전부터 그랬다).
 
+**2026-09-28(나중): 입력칸 마우스 반응 — 구글 검색창식 그림자. 커밋만 했다(push·배포 안 함).** 사용자 요청이고
+반응 방식도 사용자가 골랐다. 마우스를 올린 입력칸에 **그림자만** 깔린다(`0 3px 10px rgb(31 31 31 / .14)` — 구글 검색
+결과 화면의 검색창에서 잰 값, 0.15초). **상자 모양은 그대로가 조건이다** — 알약 모양·칸 키우기·테두리 변경·
+translate/scale 전부 사용자가 금지했다. 입력 중인 칸(focus)은 그림자 없이 코발트 테두리만, disabled 는 반응 없음,
+휴대폰은 Tailwind v4 의 `hover:` 가 `(hover: hover)` 기기에서만 켜져 따로 안 막았다. 값은 `globals.css` 의
+`--field-hover-shadow`(다크는 `0 3px 12px rgb(0 0 0 / .5)`) → `@theme` 의 `--shadow-field-hover` → `shadow-field-hover`.
+공용 `CONTROL`(`components/ui/field.tsx`)에 `transition-shadow enabled:hover:not-focus:shadow-field-hover` 를 더해
+Input·NumberInput·Select 가 다 받고(로그인 칸 포함), 공용 컴포넌트를 안 쓰는 8칸(재고 검색, 입출고 찾기·내역 검색·
+시작/종료일, 판매 스캔, 통계 시작/종료일)에는 같은 두 클래스를 직접 붙였다. 입출고 찾기(회색 칸)만 `transition-colors`
+가 있어서 `transition-[color,background-color,border-color,box-shadow]` 하나로 합쳤다. 입출고 줄 달력 버튼 뒤에 숨은
+날짜칸(`opacity-0`)·체크박스·파일 칸은 뺐다. `lib/cn.ts` 에 `shadow: ['field-hover']` 를 더했다 — 없으면 twMerge 가
+이 이름을 그림자 "색"으로 읽어 `shadow-black` 과 부딪친다(직접 돌려 확인). **검증**: 고치기 전·후 로컬 프로덕션
+빌드에서 12개 화면을 1280·390px(상품 수정은 800px 도)로 재어 입력칸마다 위치·크기·모서리·테두리·배경·여백·글자와
+클래스 목록을 비교했다(PC 한 벌 133칸) — 전부 같고 클래스는 추가만 있다(빠진 것은 위 transition-colors 하나). 상품
+수정 화면 평소 캡처는 고치기 전·후가 **바이트까지 같다**. hover 그림자 값·0.15초, 포커스+hover 에 그림자 없음·코발트,
+disabled 무반응(상품명 칸에 잠깐 disabled 를 걸어 봤다), 다크 값, 부모 overflow 에 잘리는 칸 0 을 브라우저로 확인.
+파일 임포트 미리보기 표(파일을 골라야 뜬다)와 로그인 화면(로그인 상태면 홈으로 간다)은 코드로만 봤다 — 미리보기의
+옆 스크롤 칸은 안쪽 여백이 20px 이라 그림자(아래로 13px)가 안 잘린다. 다크 모드에서 날짜 칸의 달력 아이콘이 어두운
+바탕에 묻히는 것을 봤는데 이번 일과 무관한 전부터의 모습이라 두었다.
+
 배포·로그인·상품 수정 등 이전 이력은 git log 와 이 문서의 각 절에 있다.
 아직 안 한 것: 실제 바코드 스캐너 하드웨어 검증. (실제 사용자 .xlsx 임포트는
 2026-08-01 에 초도 파일로 확인됐다.) 자세한 건 "검증 상태" 절을 봐라.
@@ -347,7 +368,12 @@ wasm 파일은 `barcode-detector` 기본값인 CDN(jsDelivr)이 아니라 **우�
   이름이 사라져 어느 줄의 숫자인지 모른다. 휴대폰은 카드로 그리고 입력칸·버튼 조각은 표와
   같은 것을 쓴다(두 벌이면 한쪽만 고쳐진다).
 - **`@theme` 에 크기·모서리 이름을 더하면 `lib/cn.ts` 에도 더해라.** 안 하면 `cn()` 이 그
-  이름을 몰라 둘 다 남기고, 호출부가 준 값이 CSS 순서에 따라 조용히 무시된다.
+  이름을 몰라 둘 다 남기고, 호출부가 준 값이 CSS 순서에 따라 조용히 무시된다. 그림자 이름도 같다 — 기본 설정은
+  모르는 `shadow-<이름>` 을 그림자 색으로 읽는다(`shadow-field-hover` 를 2026-09-28 에 더했다).
+- **입력칸은 공용 `Input`·`NumberInput`·`Select` 로 만들어라.** 직접 `<input>` 을 쓰면 마우스 hover 그림자
+  (`transition-shadow enabled:hover:not-focus:shadow-field-hover`)를 손으로 붙여야 하고, 빠뜨리면 그 칸만 반응이 없다.
+  이미 `transition-colors` 가 있는 칸에 `transition-shadow` 를 따로 달지 마라 — 둘 다 `transition-property` 라 하나가
+  덮여 사라진다. `transition-[color,background-color,border-color,box-shadow]` 하나로 합친다(입출고 찾기 칸).
 
 ---
 
@@ -1320,6 +1346,11 @@ UA 가 되어 휴대폰 셸이 뜬다(1280 으로 키우면 데스크톱 셸).
   글자 줄을 센다.
 - 요소 바깥 상자(`getBoundingClientRect`)로 겹침을 찾으면 두 줄로 꺾인 인라인 글자가 앞 글자와 겹쳐
   보인다. 줄 상자(`getClientRects`)끼리 다시 비교해야 진짜다.
+- **가려진 창에서는 CSS transition 이 첫 프레임에 멈춘다**(2026-09-28, 입력칸 hover 그림자). 마우스를 올린 뒤
+  `getComputedStyle` 이 투명한 시작값이나 중간값을 돌려줘 "안 된다"로 보인다. 잴 때만 `el.style.transition = 'none'`
+  을 걸고 읽은 뒤 되돌리거나, 스크린샷으로 프레임을 돌린 뒤 읽어라.
+- 내장 브라우저 스크린샷은 파일로 남지 않는다. 보고용 캡처가 필요하면 세션 기록(`~/.claude/projects/…/<세션>.jsonl`)의
+  마지막 이미지 블록(base64, jpeg)을 꺼내 저장했다. 창 크기를 800×800 이하로 맞춰야 줄이지 않은 원본 크기로 찍힌다.
 
 ---
 

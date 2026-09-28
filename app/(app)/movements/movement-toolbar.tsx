@@ -66,7 +66,7 @@ export function MovementToolbar({ query }: { query: MovementQuery }) {
             aria-label="내역에서 상품 찾기"
             autoCapitalize="none"
             autoComplete="off"
-            className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-touch w-full rounded-lg border pr-3 pl-10 text-base outline-none"
+            className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-touch w-full rounded-lg border pr-3 pl-10 text-base outline-none transition-shadow enabled:hover:not-focus:shadow-field-hover"
           />
         </div>
 
@@ -76,7 +76,7 @@ export function MovementToolbar({ query }: { query: MovementQuery }) {
             type="date"
             name="from"
             defaultValue={query.from}
-            className="bg-surface text-ink border-border-strong focus:border-primary h-touch rounded-lg border px-3 text-base outline-none"
+            className="bg-surface text-ink border-border-strong focus:border-primary h-touch rounded-lg border px-3 text-base outline-none transition-shadow enabled:hover:not-focus:shadow-field-hover"
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -85,7 +85,7 @@ export function MovementToolbar({ query }: { query: MovementQuery }) {
             type="date"
             name="to"
             defaultValue={query.to}
-            className="bg-surface text-ink border-border-strong focus:border-primary h-touch rounded-lg border px-3 text-base outline-none"
+            className="bg-surface text-ink border-border-strong focus:border-primary h-touch rounded-lg border px-3 text-base outline-none transition-shadow enabled:hover:not-focus:shadow-field-hover"
           />
         </label>
         <button

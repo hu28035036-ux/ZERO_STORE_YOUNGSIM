@@ -192,7 +192,7 @@ export function SaleLinesForm({ device }: { device: Device }) {
               autoComplete="off"
               // 스캐너는 코드를 치고 엔터를 누른다. 폼의 submit 이 그대로 조회가 된다.
               enterKeyHint="search"
-              className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-12 w-full rounded-lg border pr-3 pl-11 text-base outline-none"
+              className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-12 w-full rounded-lg border pr-3 pl-11 text-base outline-none transition-shadow enabled:hover:not-focus:shadow-field-hover"
             />
           </div>
           {/* 컨트롤드 입력이라 공용 ScanButton(DOM 에 값을 직접 넣는 방식)을 못

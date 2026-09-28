@@ -57,7 +57,7 @@ export function StockToolbar({ query }: { query: StockQuery }) {
               aria-label="재고 검색"
               autoCapitalize="none"
               autoComplete="off"
-              className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-11 w-full rounded-lg border pr-3 pl-10 text-base outline-none"
+              className="bg-surface text-ink border-border-strong placeholder:text-ink-subtle focus:border-primary h-11 w-full rounded-lg border pr-3 pl-10 text-base outline-none transition-shadow enabled:hover:not-focus:shadow-field-hover"
             />
           </div>
           {/* "이거 몇 개 남았지?" 를 물건을 들고 바로 확인하는 경로. 스캔값은

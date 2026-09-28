@@ -14,6 +14,12 @@ const CONTROL = cn(
   'focus:border-primary outline-none',
   'disabled:opacity-50',
   'aria-invalid:border-danger',
+  // 마우스를 올리면 그림자만 깔린다(globals.css 의 --field-hover-shadow). 입력 중인 칸에서는 빼야
+  // 코발트 테두리 하나로 "지금 치는 칸"이 읽히고, 누를 수 없는 칸(disabled)은 반응하면 안 된다.
+  // 휴대폰은 따로 막지 않는다 — Tailwind v4 의 hover: 는 마우스가 있는 기기에서만 켜진다.
+  // 공용 Input 을 안 쓰는 칸(재고 검색, 입출고 찾기·내역 검색·날짜, 판매 스캔, 통계 기간)에도
+  // 같은 두 클래스를 직접 붙였다 — 여기를 바꾸면 거기도 같이 바꿔라.
+  'transition-shadow enabled:hover:not-focus:shadow-field-hover',
 )
 
 export function Field({

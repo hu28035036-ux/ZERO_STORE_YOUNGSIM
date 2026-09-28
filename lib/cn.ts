@@ -15,6 +15,9 @@ const twMerge = extendTailwindMerge({
     theme: {
       spacing: ['touch', 'touch-lg'],
       radius: ['card'],
+      // 기본 설정은 shadow-<모르는 이름> 을 그림자 "색"으로 읽는다. 그러면 cn('shadow-field-hover',
+      // 'shadow-black') 이 그림자를 지우고 'shadow-none' 과는 둘 다 남긴다(2026-09-28 확인).
+      shadow: ['field-hover'],
     },
   },
 })

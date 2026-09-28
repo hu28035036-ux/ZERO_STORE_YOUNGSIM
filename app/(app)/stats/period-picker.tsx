@@ -51,7 +51,7 @@ export function PeriodPicker({ period, days }: { period: Period; days: number })
           max={today}
           required
           aria-label="시작일"
-          className="bg-surface text-ink border-border-strong focus:border-primary h-9 rounded-lg border px-3 text-sm outline-none"
+          className="bg-surface text-ink border-border-strong focus:border-primary h-9 rounded-lg border px-3 text-sm outline-none transition-shadow enabled:hover:not-focus:shadow-field-hover"
         />
         <span className="text-ink-subtle text-sm">~</span>
         <input
@@ -61,7 +61,7 @@ export function PeriodPicker({ period, days }: { period: Period; days: number })
           max={today}
           required
           aria-label="종료일"
-          className="bg-surface text-ink border-border-strong focus:border-primary h-9 rounded-lg border px-3 text-sm outline-none"
+          className="bg-surface text-ink border-border-strong focus:border-primary h-9 rounded-lg border px-3 text-sm outline-none transition-shadow enabled:hover:not-focus:shadow-field-hover"
         />
         <button type="submit" className={buttonClass('secondary', 'sm')}>
           기간 보기
