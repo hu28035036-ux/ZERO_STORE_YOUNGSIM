@@ -31,6 +31,21 @@ export const FILTER_LABEL: Record<MovementFilter, string> = {
 
 export const LIST_LIMIT = 100
 
+/**
+ * 등록 화면(/movements) 빠른 등록 목록 칸의 id — 쪽을 넘기면 Pager 가 이 칸 위쪽을 상단 바
+ * 아래로 올린다. 'use client' 파일에 두면 서버 화면이 받는 값이 문자열이 아니라 클라이언트 참조가
+ * 된다(stock/query.ts 의 STOCK_LIST_ID 와 같은 이유).
+ */
+export const QUICK_LIST_ID = 'quick-list'
+
+/**
+ * 빠른 등록 목록의 1쪽 주소. 쪽 번호는 Pager 가 붙인다(lib/pagination.ts 의 withPage — 1부터 센다).
+ * 아래 movementHref 는 기록 화면용이라 쪽을 0부터 세는 옛 규칙이다. 섞지 마라.
+ */
+export function quickListHref(q: string): string {
+  return q ? `/movements?${new URLSearchParams({ q })}` : '/movements'
+}
+
 export type MovementQuery = {
   type: MovementFilter
   /** 특정 변형의 내역만. 재고 화면에서 넘어올 때 쓴다. */

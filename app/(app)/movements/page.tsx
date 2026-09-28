@@ -1,15 +1,20 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Boxes, ChevronRight, FileUp, ScrollText, Search } from 'lucide-react'
 
 import { buttonClass } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
+import { Pager } from '@/components/ui/pager'
 import { todayInSeoul } from '@/lib/constants'
+import { pageCount, parsePage, withPage } from '@/lib/pagination'
+import { getDevice } from '@/lib/server-device'
 import { createClient } from '@/lib/supabase/server'
 
 import { parseEntryDate } from './entry-date'
 import { MovementForm, type SupplierOption, type VariantTarget } from './movement-form'
-import { fetchQuickPage } from './quick-fetch'
+import { QUICK_LIST_ID, quickListHref } from './query'
+import { fetchQuickPage, QUICK_PAGE_SIZE } from './quick-fetch'
 import { QuickList } from './quick-list'
 import type { QuickTarget } from './quick-row'
 import { ScanSearchButton } from './scan-search-button'
@@ -34,15 +39,17 @@ export default async function MovementsPage({
   const sp = await searchParams
   const q = (typeof sp.q === 'string' ? sp.q : '').trim().slice(0, 40)
   const wanted = typeof sp.variant === 'string' && UUID.test(sp.variant) ? sp.variant : null
+  const page = parsePage(sp.page)
   const today = todayInSeoul()
   // 줄의 달력에서 지난 날짜를 골라 둔 채 "자세히"로 들어오면 큰 폼의 발생일이 그 날이다.
   const date = parseEntryDate(sp.date, today)
 
   const supabase = await createClient()
 
-  // ?variant= 로 콕 집어 들어왔으면 그 한 건만 큰 폼으로 연다. 아니면 첫 30개를
-  // 받고 나머지는 QuickList 가 스크롤할 때 이어 받는다(quick-fetch.ts).
-  const [picked, firstPage, suppliers] = await Promise.all([
+  // ?variant= 로 콕 집어 들어왔으면 그 한 건만 큰 폼으로 연다. 아니면 목록의 한 쪽(30줄)을
+  // 받는다(quick-fetch.ts). 쪽 넘김은 아래 Pager 다.
+  const [device, picked, listPage, suppliers] = await Promise.all([
+    getDevice(),
     wanted
       ? supabase
           .from('v_variant_stock')
@@ -52,7 +59,7 @@ export default async function MovementsPage({
           .eq('variant_id', wanted)
           .maybeSingle()
       : Promise.resolve(null),
-    wanted ? Promise.resolve(null) : fetchQuickPage(q, 0),
+    wanted ? Promise.resolve(null) : fetchQuickPage(q, page),
     supabase
       .from('suppliers')
       .select('id, name')
@@ -61,12 +68,20 @@ export default async function MovementsPage({
   ])
 
   const target = picked?.data ?? null
-  const targets: QuickTarget[] = firstPage?.rows ?? []
-  const total = firstPage?.total ?? 0
+  const targets: QuickTarget[] = listPage?.rows ?? []
+  const total = listPage?.total ?? 0
+
+  // 없는 쪽이면 마지막 쪽으로 보낸다(stock/page.tsx 의 keepPageInRange 와 같은 이유 — 빈 쪽이면
+  // "상품명이나 바코드로 먼저 찾으세요"가 떠서 목록이 사라진 줄 안다). redirect 는 예외를 던진다.
+  if (listPage && !listPage.error) {
+    const last = pageCount(total, QUICK_PAGE_SIZE)
+    if (page > last) redirect(withPage(quickListHref(q), last))
+  }
 
   // 스캔·검색이 한 건으로 떨어졌으면 그 줄 수량 칸이 포커스를 가진다. 이때는
   // 검색칸의 autoFocus 를 꺼야 한다 — 둘 다 걸면 검색칸이 이긴다(실제로 그랬다).
-  const single = targets.length === 1 && Boolean(q)
+  // 쪽의 줄 수가 아니라 전체 건수로 본다 — 31건의 2쪽은 한 줄이지만 한 건으로 떨어진 게 아니다.
+  const single = total === 1 && Boolean(q)
 
   const supplierOptions: SupplierOption[] = (suppliers.data ?? []).map((s) => ({
     id: s.id,
@@ -179,7 +194,20 @@ export default async function MovementsPage({
             </p>
           ) : null}
 
-          <QuickList key={q} initialRows={targets} total={total} q={q} today={today} />
+          <div id={QUICK_LIST_ID} className="flex flex-col gap-4">
+            <QuickList rows={targets} q={q} today={today} single={single} />
+            {targets.length > 0 ? (
+              <Pager
+                base={quickListHref(q)}
+                page={page}
+                total={total}
+                pageSize={QUICK_PAGE_SIZE}
+                device={device === 'mobile' ? 'mobile' : 'desktop'}
+                listId={QUICK_LIST_ID}
+                label="입출고 상품 목록 쪽"
+              />
+            ) : null}
+          </div>
         </>
       )}
     </div>
