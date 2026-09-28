@@ -54,22 +54,34 @@ export type SortKey = keyof typeof SORTS
 const SORT_KEYS = Object.keys(SORTS) as SortKey[]
 
 /**
- * 재고 목록을 한 번에 가져오는 행수. 화면 끝까지 스크롤하면 다음 30개를 더 받는다.
+ * 재고 목록 한 쪽의 행수. 삭제됨 탭도 같은 크기로 나눈다.
  *
  * 처음엔 200개를 한 번에 받고 잘랐는데, 432개 품목이 되자 "200개까지만" 안내가
- * 늘 떠 있어 전체를 못 보는 화면이 됐다. 30 은 한 화면 반 정도 — 첫 응답이
- * 가볍고, 스크롤 두어 번이면 다음 묶음이 미리 붙어 끊김이 안 보인다.
+ * 늘 떠 있어 전체를 못 보는 화면이 됐다. 그 뒤 30개씩 이어 붙이는 무한 스크롤을 거쳐
+ * 2026-09-28 에 사용자 요청으로 쪽 넘김이 됐다 — 30 은 그때 정한 크기 그대로다.
  */
 export const PAGE_SIZE = 30
 
-/** 삭제됨 탭처럼 아직 페이지를 안 나눈 목록의 상한. */
-export const LIST_LIMIT = 200
+/**
+ * 목록 칸의 id — 쪽을 넘기면 StockPager 가 이 칸의 위쪽을 검색 막대 바로 아래로 올린다.
+ * 'use client' 파일(stock-pager.tsx)에 두면 서버 화면(page.tsx)이 받는 값이 문자열이 아니라
+ * 클라이언트 참조가 되어 id 가 엉뚱하게 찍힌다. 그래서 양쪽이 같이 읽는 여기에 둔다.
+ */
+export const STOCK_LIST_ID = 'stock-list'
+
+/**
+ * 주소로 받는 쪽 번호의 상한. 그대로 두면 ?page=99999999999999999999 가 offset 3e+21
+ * 같은 표기가 되어 DB 가 범위를 못 읽고 오류 화면이 뜬다. 30만 행은 이 가게에 넉넉하다.
+ */
+const MAX_PAGE = 10_000
 
 export type StockQuery = {
   q: string
   filter: StockFilter
   sort: SortKey
   desc: boolean
+  /** 1부터 센다(1 = 첫 쪽). 화면 번호와 같아서 ±1 환산이 없다. */
+  page: number
   /** 상품 수정 화면에서 삭제하고 돌아왔을 때 보여줄 이름. 필터·정렬과 달리
    *  링크 상태가 아니라 1회성 안내라 stockHref/sortHref 는 이 값을 건드리지 않는다. */
   archivedName: string | null
@@ -80,23 +92,32 @@ export function parseStockQuery(sp: {
 }): StockQuery {
   const raw = typeof sp.q === 'string' ? sp.q : ''
   const archivedRaw = typeof sp.archived === 'string' ? sp.archived : ''
+  // 숫자만 받는다. Number() 에 맡기면 "1e3"·"2.5" 도 쪽 번호가 된다.
+  const pageRaw = typeof sp.page === 'string' && /^[1-9]\d*$/.test(sp.page) ? Number(sp.page) : 1
   return {
     q: raw.trim().slice(0, 40),
     filter: FILTERS.find((f) => f === sp.filter) ?? 'all',
     sort: SORT_KEYS.find((s) => s === sp.sort) ?? 'name',
     desc: sp.dir === 'desc',
+    page: Math.min(pageRaw, MAX_PAGE),
     archivedName: archivedRaw.trim().slice(0, 120) || null,
   }
 }
 
-/** 현재 조건에서 일부만 바꾼 링크. 기본값은 URL 에 남기지 않는다. */
+/**
+ * 현재 조건에서 일부만 바꾼 링크. 기본값은 URL 에 남기지 않는다.
+ *
+ * 쪽은 patch 에 없으면 1쪽으로 돌린다. 필터·정렬을 바꾸면 목록이 통째로 달라져서, 보던 쪽
+ * 번호가 남으면 엉뚱한 자리부터 보이거나("부족·품절 7쪽") 없는 쪽이 된다.
+ */
 export function stockHref(current: StockQuery, patch: Partial<StockQuery>): string {
-  const next = { ...current, ...patch }
+  const next = { ...current, page: 1, ...patch }
   const params = new URLSearchParams()
   if (next.q) params.set('q', next.q)
   if (next.filter !== 'all') params.set('filter', next.filter)
   if (next.sort !== 'name') params.set('sort', next.sort)
   if (next.desc) params.set('dir', 'desc')
+  if (next.page > 1) params.set('page', String(next.page))
   const qs = params.toString()
   return qs ? `/stock?${qs}` : '/stock'
 }

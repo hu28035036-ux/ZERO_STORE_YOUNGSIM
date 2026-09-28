@@ -1,17 +1,21 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { Boxes, FileUp, Plus, Tag, TriangleAlert, Wallet } from 'lucide-react'
 
 import { buttonClass } from '@/components/ui/button'
 import { Card, StatTile } from '@/components/ui/card'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatQty, formatWon } from '@/lib/constants'
+import { pageCount } from '@/lib/pagination'
 import { getDevice } from '@/lib/server-device'
 import { createClient } from '@/lib/supabase/server'
 
-import { ArchivedTable, type ArchivedProduct } from './archived-table'
-import { fetchStockPage } from './list'
-import { LIST_LIMIT, likePattern, parseStockQuery } from './query'
-import { StockInfinite } from './stock-infinite'
+import { ArchivedTable } from './archived-table'
+import { fetchArchivedPage, fetchStockPage } from './list'
+import { PAGE_SIZE, parseStockQuery, STOCK_LIST_ID, stockHref, type StockQuery } from './query'
+import { StockCards } from './stock-cards'
+import { StockPager } from './stock-pager'
+import { StockTable } from './stock-table'
 import { StockToolbar } from './stock-toolbar'
 
 export const metadata = { title: '재고' }
@@ -94,28 +98,21 @@ export default async function StockPage({
   )
 
   if (query.filter === 'archived') {
-    const pattern = likePattern(query.q)
-    let archivedList = supabase
-      .from('v_archived_products')
-      .select('*')
-      .order('archived_at', { ascending: false })
-      .limit(LIST_LIMIT)
-    if (pattern) archivedList = archivedList.ilike('product_name', pattern)
-
-    const [device, archivedResult] = await Promise.all([getDevice(), archivedList])
-    const archivedRows = (archivedResult.data ?? []) as ArchivedProduct[]
+    const [device, archived] = await Promise.all([getDevice(), fetchArchivedPage(query)])
+    if (!archived.error) keepPageInRange(query, archived.total)
+    const view = device === 'mobile' ? 'mobile' : 'desktop'
 
     return (
       <div className="flex flex-col gap-6">
         {header}
         <StockToolbar query={query} />
 
-        {archivedResult.error ? (
+        {archived.error ? (
           <Card className="p-5">
             <p className="text-danger text-sm font-medium">삭제된 상품을 불러오지 못했습니다.</p>
-            <p className="text-ink-muted mt-1.5 text-sm">{archivedResult.error.message}</p>
+            <p className="text-ink-muted mt-1.5 text-sm">{archived.error}</p>
           </Card>
-        ) : archivedRows.length === 0 ? (
+        ) : archived.rows.length === 0 ? (
           <Card className="p-5">
             <p className="text-ink text-sm font-medium">삭제한 상품이 없습니다.</p>
             <p className="text-ink-muted mt-1.5 text-sm">
@@ -123,13 +120,18 @@ export default async function StockPage({
             </p>
           </Card>
         ) : (
-          <ArchivedTable rows={archivedRows} device={device === 'mobile' ? 'mobile' : 'desktop'} />
+          <div id={STOCK_LIST_ID} className="flex flex-col gap-3">
+            <ArchivedTable key={`${query.q}|${query.page}`} rows={archived.rows} device={view} />
+            <StockPager query={query} total={archived.total} device={view} />
+          </div>
         )}
       </div>
     )
   }
 
-  const [device, listResult] = await Promise.all([getDevice(), fetchStockPage(query, 0)])
+  const [device, listResult] = await Promise.all([getDevice(), fetchStockPage(query)])
+  if (!listResult.error) keepPageInRange(query, listResult.total)
+  const view = device === 'mobile' ? 'mobile' : 'desktop'
 
   const rows = listResult.rows
   const narrowed = Boolean(query.q) || query.filter !== 'all'
@@ -157,17 +159,32 @@ export default async function StockPage({
           </p>
         </Card>
       ) : (
-        // 첫 30개는 여기서 렌더하고, 나머지는 스크롤할 때 클라이언트가 받아 붙인다.
-        // key 에 조건을 넣어 검색·필터·정렬이 바뀌면 누적분을 통째로 버리게 한다.
-        <StockInfinite
-          key={`${query.q}|${query.filter}|${query.sort}|${query.desc}`}
-          initialRows={rows}
-          total={listResult.total}
-          query={query}
-          device={device === 'mobile' ? 'mobile' : 'desktop'}
-        />
+        <div id={STOCK_LIST_ID} className="flex flex-col gap-3">
+          {view === 'mobile' ? (
+            <StockCards rows={rows} />
+          ) : (
+            // key 에 쪽까지 넣는다. 체크해 둔 선택이 다음 쪽으로 따라가면 화면에 없는 상품이
+            // "N개 선택"에 섞여 같이 지워진다.
+            <StockTable
+              key={`${query.q}|${query.filter}|${query.sort}|${query.desc}|${query.page}`}
+              rows={rows}
+              query={query}
+            />
+          )}
+          <StockPager query={query} total={listResult.total} device={view} />
+        </div>
       )}
     </div>
   )
+}
+
+/**
+ * 없는 쪽이면 마지막 쪽으로 보낸다. 지워서 쪽 수가 줄었거나(마지막 쪽의 상품을 다 지운 뒤
+ * 다시 그릴 때) 주소를 손으로 고친 경우다. 빈 쪽을 그대로 그리면 "조건에 맞는 재고가 없습니다"가
+ * 떠서 재고가 사라진 줄 안다. redirect 는 예외를 던지므로 try 안에서 부르면 안 된다.
+ */
+function keepPageInRange(query: StockQuery, total: number) {
+  const last = pageCount(total, PAGE_SIZE)
+  if (query.page > last) redirect(stockHref(query, { page: last }))
 }
 

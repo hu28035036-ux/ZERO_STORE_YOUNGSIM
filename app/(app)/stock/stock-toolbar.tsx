@@ -25,7 +25,8 @@ export function StockToolbar({ query }: { query: StockQuery }) {
     // z-30: sticky 는 쌓임 맥락을 만들어 이 안의 카메라 스캔 화면(fixed z-50)을 가둔다.
     // 데스크톱 상단 바(z-20)보다 낮으면 스캔 화면 위에 상단 바가 떠서 탭이 눌린다.
     // top 은 셸이 잰 상단 바 높이다(components/shell/use-header-height.ts).
-    <div className="bg-surface-sunken sticky top-[var(--app-header-h)] z-30 -my-2 py-2">
+    // data-stock-toolbar: 쪽을 넘기면 StockPager 가 이 막대 높이만큼 비켜서 목록 첫 줄을 보인다.
+    <div data-stock-toolbar className="bg-surface-sunken sticky top-[var(--app-header-h)] z-30 -my-2 py-2">
       <Card className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
         <form action="/stock" className="flex w-full min-w-0 gap-2 sm:w-auto sm:flex-1">
           {/* 검색해도 보던 필터·정렬은 유지되어야 한다. */}
