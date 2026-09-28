@@ -31,14 +31,21 @@ function scrollToListTop() {
   window.scrollTo({ top: Math.max(0, top) })
 }
 
-const BOX = 'inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-lg text-sm font-medium'
+const BOX = 'inline-flex h-10 items-center justify-center gap-1 rounded-lg text-sm font-medium'
+
+/**
+ * 한 줄에 보이는 번호 수. PC 10 은 사용자가 정한 값이다(2026-09-28, lib/pagination.ts 의 규칙).
+ * 휴대폰은 10개와 마지막 번호가 360px 한 줄에 들어가려면 칸이 손가락보다 좁아져(약 26px) 5개로
+ * 같은 규칙을 쓴다 — 5개 + "…" + 마지막 + 이전·다음이 36px 칸으로 328px 에 딱 들어간다.
+ */
+const NUMBERS = { mobile: 5, desktop: 10 } as const
 
 /**
  * 재고 목록 쪽 넘김. 2026-09-28 사용자 요청으로 30개씩 이어 붙이던 무한 스크롤을 대신한다.
  *
  * 쪽 번호는 주소(?page=)에 있고 전부 그냥 링크다 — 길게 눌러 새 탭으로 열기와 뒤로 가기가
- * 그대로 동작한다. 휴대폰은 처음·현재·끝 쪽만(360px 에 번호 일곱 칸과 이전·다음이 안
- * 들어간다), PC 는 현재 쪽 양옆까지 보인다.
+ * 그대로 동작한다. 번호 줄의 길이는 쪽마다 달라지지만(끝 쪽에 가면 "… 15"가 빠진다) 이전은
+ * 왼쪽 끝·다음은 오른쪽 끝에 못 박아서, "다음"을 같은 자리에서 연달아 누를 수 있다.
  */
 export function StockPager({
   query,
@@ -61,6 +68,8 @@ export function StockPager({
 
   const from = (page - 1) * PAGE_SIZE + 1
   const to = Math.min(page * PAGE_SIZE, total)
+  // 번호 칸 폭. 휴대폰 36px 는 위 NUMBERS 주석의 폭 계산에 맞춘 값이다.
+  const cell = mobile ? 'min-w-9 px-1.5' : 'min-w-10 px-2'
 
   function pageLink(n: number, className: string, children: ReactNode, label: string | undefined) {
     return (
@@ -85,7 +94,7 @@ export function StockPager({
     // 휴대폰은 화살표만 — 글자까지 넣으면 번호 칸이 들어갈 자리가 없다.
     const inner = mobile ? icon : dir === 'prev' ? <>{icon}{text}</> : <>{text}{icon}</>
     // 이전·다음이 주 동작이라 번호보다 눈에 띄게 테두리를 둔다(입출고 기록의 이전·다음과 같은 꼴).
-    const shape = cn('border', mobile ? 'w-10' : 'px-3')
+    const shape = cn('shrink-0 border', mobile ? 'w-9' : 'px-3')
     if (n < 1 || n > pages) {
       // 누를 수 없는 자리. 자리는 지켜 번호 줄이 옆으로 밀리지 않게 하고, 읽기 프로그램은 건너뛴다.
       return (
@@ -110,28 +119,38 @@ export function StockPager({
           : `${formatQty(total)}개`}
       </p>
       {pages > 1 ? (
-        // flex-wrap: 데스크톱 셸을 아주 좁은 창으로 볼 때 번호 줄이 페이지 밖으로 밀지 않게.
-        <nav aria-label="재고 목록 쪽" className="flex flex-wrap items-center justify-center gap-1" data-numeric>
+        // flex-wrap: 360px 보다 좁은 화면이나 아주 좁은 PC 창에서 번호 줄이 페이지 밖으로 밀지 않게.
+        <nav
+          aria-label="재고 목록 쪽"
+          className="flex w-full max-w-3xl flex-wrap items-center justify-between gap-1"
+          data-numeric
+        >
           {step('prev')}
-          {pageItems(page, pages, mobile ? 0 : 1).map((item, i) =>
-            item === 'gap' ? (
-              <span key={`gap-${i}`} aria-hidden className="text-ink-subtle inline-flex w-6 justify-center">
-                …
-              </span>
-            ) : item === page ? (
-              <span
-                key={item}
-                aria-current="page"
-                className={cn(BOX, 'bg-ink-strong text-ink-inverted px-2 font-semibold')}
-              >
-                {item}
-              </span>
-            ) : (
-              <Fragment key={item}>
-                {pageLink(item, 'text-ink-muted hover:bg-surface hover:text-ink px-2', item, `${item}쪽`)}
-              </Fragment>
-            ),
-          )}
+          <div className={cn('flex items-center justify-center', mobile ? 'gap-0.5' : 'gap-1')}>
+            {pageItems(page, pages, NUMBERS[device]).map((item, i) =>
+              item === 'gap' ? (
+                <span
+                  key={`gap-${i}`}
+                  aria-hidden
+                  className={cn('text-ink-subtle inline-flex justify-center', mobile ? 'w-5' : 'w-6')}
+                >
+                  …
+                </span>
+              ) : item === page ? (
+                <span
+                  key={item}
+                  aria-current="page"
+                  className={cn(BOX, cell, 'bg-ink-strong text-ink-inverted font-semibold')}
+                >
+                  {item}
+                </span>
+              ) : (
+                <Fragment key={item}>
+                  {pageLink(item, cn(cell, 'text-ink-muted hover:bg-surface hover:text-ink'), item, `${item}쪽`)}
+                </Fragment>
+              ),
+            )}
+          </div>
           {step('next')}
         </nav>
       ) : null}
