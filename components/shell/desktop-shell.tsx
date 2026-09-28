@@ -7,6 +7,7 @@ import { useRef } from 'react'
 import { cn } from '@/lib/cn'
 import { isActive, NAV } from '@/lib/nav'
 
+import { BackButton } from './back-button'
 import { useHeaderHeightVar } from './use-header-height'
 
 /**
@@ -99,11 +100,22 @@ export function TabNav({
   return (
     <nav
       aria-label="주요 메뉴"
-      className={cn('mx-auto w-full max-w-[1280px]', compact ? 'px-1' : 'overflow-x-auto px-4')}
+      className={cn(
+        'mx-auto flex w-full max-w-[1280px] items-center',
+        compact ? 'px-1' : 'overflow-x-auto px-4',
+      )}
     >
-      {/* compact(휴대폰)는 탭 다섯 개를 같은 폭으로 나눠 390px 에 다 넣는다. 가로
-          스크롤로 두면 마지막 탭(설정)이 있는 줄도 모르고 지나간다 — 실제로 잘렸다. */}
-      <ul className={cn('flex', compact ? 'w-full' : 'gap-0.5')}>
+      {/* 뒤로가기는 맨 왼쪽 — PC 는 홈 탭 앞, 휴대폰은 탭 줄에 홈이 없어 재고 탭 앞이다.
+          세로 선은 "여기까지는 동작, 여기부터 메뉴"를 가른다. */}
+      <BackButton compact={compact} />
+      <span
+        aria-hidden
+        className={cn('bg-border-base w-px shrink-0', compact ? 'mx-0.5 h-6' : 'mx-1 h-5')}
+      />
+      {/* compact(휴대폰)는 탭 다섯 개를 남은 폭에 같은 폭으로 나눠 다 넣는다(360px 에서 뒤로가기를
+          빼고 한 칸 58px). 가로 스크롤로 두면 마지막 탭(설정)이 있는 줄도 모르고 지나간다 — 실제로
+          잘렸다. */}
+      <ul className={cn('flex', compact ? 'min-w-0 flex-1' : 'gap-0.5')}>
         {items.map((item) => {
           const active = isActive(pathname, item.href)
           const Icon = item.icon
