@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 
+import { BrandLogo } from '@/components/shell/brand-logo'
 import { Card } from '@/components/ui/card'
 
 import { LoginForm } from './login-form'
@@ -18,13 +19,9 @@ export default async function LoginPage({
     <main className="flex flex-1 items-center justify-center p-6">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          {/* 사이드바 로고 자리와 같은 모양. 로그인 화면과 안쪽 화면이 한 앱으로 보이게. */}
-          <span
-            aria-hidden
-            className="bg-primary text-primary-ink mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl text-2xl font-semibold"
-          >
-            Z
-          </span>
+          {/* 상단 바(32px)보다 크게 둔다. 이 화면에서는 로고가 첫인상인데, 선이 가는 그림이라
+              작으면 무슨 그림인지 안 읽힌다. */}
+          <BrandLogo size={56} className="mb-4" />
           <p className="text-primary text-[0.6875rem] font-bold tracking-[0.18em]">ZERO STORE</p>
           <h1 className="text-ink mt-1.5 text-2xl font-semibold tracking-tight">
             영심 스토어 재고 관리

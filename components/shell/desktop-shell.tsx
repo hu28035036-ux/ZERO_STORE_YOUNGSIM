@@ -8,6 +8,7 @@ import { cn } from '@/lib/cn'
 import { isActive, NAV } from '@/lib/nav'
 
 import { BackButton } from './back-button'
+import { BrandLogo } from './brand-logo'
 import { useHeaderHeightVar } from './use-header-height'
 
 /**
@@ -69,13 +70,8 @@ export function DesktopShell({
 export function Brand({ storeName }: { storeName: string }) {
   return (
     <Link href="/" className="flex min-w-0 items-center gap-2.5">
-      {/* 로고 자리. 이미지가 없으니 가게 첫 글자. 검정 사각형이 상단 바의 닻이 된다. */}
-      <span
-        aria-hidden
-        className="bg-ink-strong text-ink-inverted inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm font-bold"
-      >
-        {storeName.trim().charAt(0) || 'Z'}
-      </span>
+      {/* 32px: PC 상단 바 오른쪽 끝의 이름 동그라미(h-8)와 같은 크기 — 양 끝 높이가 맞는다. */}
+      <BrandLogo size={32} />
       <span className="text-ink truncate text-sm font-bold">{storeName}</span>
       <span className="text-ink-subtle hidden text-[0.625rem] tracking-[0.2em] sm:inline">
         ZERO STORE

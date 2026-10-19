@@ -20,6 +20,8 @@ export const metadata: Metadata = {
     template: '%s · ZERO STORE',
   },
   description: '영심 스토어 재고·판매 관리',
+  // 아이폰 홈 화면 아이콘 밑 이름. 화면마다 제목이 달라("재고 · ZERO STORE") 어디서 추가하든 같게 박는다.
+  appleWebApp: { title: 'ZERO STORE' },
 }
 
 export const viewport: Viewport = {
