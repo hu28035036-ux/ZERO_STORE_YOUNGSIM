@@ -25,7 +25,8 @@ const SITES: { name: string; href: string; icon: StaticImageData }[] = [
   },
   { name: '온리원푸드넷', href: 'https://onlyonefoodnetfo.ifresh.co.kr/', icon: onlyonefoodnet },
   { name: '발주GO', href: 'https://balju.co.kr/zero', icon: balju },
-  { name: '제로스토어 관리자', href: 'https://zerostore.kr/Administrator', icon: zerostore },
+  // 아이콘은 zerostore.kr 의 것을 그대로 쓴다. 점주공간 탭 아이콘은 같은 그림의 흑백만 뒤집은 것이다.
+  { name: '제로스토어 점주공간', href: 'https://zerostoreceo.kr/login?back_url=Lw%3D%3D', icon: zerostore },
 ]
 
 export function SiteLinks() {
